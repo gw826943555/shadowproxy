@@ -15,32 +15,6 @@ PKG_LICENSE:=GPLv3
 PKG_LICENSE_FILES:=LICENSE
 PKG_MAINTAINER:=King <9566618@gmail.com>
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)-$(PKG_RELEASE)
-PKG_HASH:=skip
-
-# This used to carry a top-level "PKGARCH:=all", which never took effect: define
-# Package/Default in include/package-defaults.mk assigns PKGARCH:=$(ARCH_PACKAGES),
-# and BuildPackage evaluates it after the top-level assignments, so anything set
-# out here is silently overwritten. PKGARCH only works inside define Package/...
-# We want $(ARCH_PACKAGES) anyway -- the package ships a prebuilt sslocal and is
-# not architecture independent -- so the correct value is simply the default.
-
-PKG_LIBC:=musl
-
-# $(ARCH) is "arm" for every 32-bit ARM subtarget, from ARMv4 (arm_fa526) up to
-# ARMv7 (arm_cortex-a15_neon-vfpv4), so it cannot select the right binary on its
-# own. $(ARCH_PACKAGES) carries the CPU type. Every OpenWrt arm_cortex-a*
-# subtarget is an ARMv7-A core (or an ARMv8 core running 32-bit code, which is a
-# superset), so they all run the armv7-unknown-linux-musleabihf build. The other
-# arm subtargets -- arm1176jzf-s, mpcore, arm926ej-s, xscale, fa526 -- are ARMv6
-# or older; no binary is bundled for them and Build/Compile fails loudly.
-SS_ARCH:=$(ARCH)
-ifeq ($(ARCH),arm)
-  SS_ARCH:=$(if $(filter arm_cortex-a%,$(ARCH_PACKAGES)),armv7,$(ARCH))
-endif
-
-PKG_TARGET_FILE:=$(SS_ARCH)-$(PKG_LIBC)/sslocal
-
 include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)
@@ -49,7 +23,7 @@ define Package/$(PKG_NAME)
 	SUBMENU:=VPN
 	TITLE:=Shadowsocks-Rust TProxy
 	URL:=https://github.com/shadowsocks/shadowsocks-rust
-	DEPENDS:=+kmod-nft-tproxy
+	DEPENDS:=+kmod-nft-tproxy +shadowsocks-rust-ssservice
 endef
 
 define Package/$(PKG_NAME)/description
@@ -58,15 +32,7 @@ define Package/$(PKG_NAME)/description
 	for controlling all net packets
 endef
 
-# Nothing is compiled here, but fail early and with a readable message when the
-# target has no bundled binary, instead of erroring out inside INSTALL_BIN.
 define Build/Compile
-	@if [ ! -f "./bin/$(PKG_TARGET_FILE)" ]; then \
-		echo "$(PKG_NAME): no bundled sslocal for ARCH=$(ARCH) ARCH_PACKAGES=$(ARCH_PACKAGES)"; \
-		echo "$(PKG_NAME): expected ./bin/$(PKG_TARGET_FILE)"; \
-		exit 1; \
-	fi
-	echo "$(PKG_NAME): using bundled ./bin/$(PKG_TARGET_FILE)"
 endef
 
 define Package/$(PKG_NAME)/install
@@ -74,8 +40,6 @@ define Package/$(PKG_NAME)/install
 	cp -pR ./root/* $(1)/
 	$(INSTALL_DIR) $(1)/www
 	cp -pR ./htdocs/* $(1)/www
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) ./bin/$(PKG_TARGET_FILE) $(1)/usr/bin
 endef
 
 define Package/$(PKG_NAME)/postinst
