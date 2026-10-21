@@ -98,8 +98,45 @@ opkg install nftables kmod-nft-tproxy
    - **端口**：服务器端口
    - **密码**：连接密码
    - **加密方式**：推荐 `aes-256-gcm` 或 `chacha20-ietf-poly1305`
+   - **Plugin**：可选，目前仅支持 `obfs-local`（simple-obfs）
+   - **Plugin Options**：插件参数，如 `obfs=http;obfs-host=www.bing.com`
 
 > 💡 建议同时配置 IPv4 和 IPv6 服务器，系统会自动选择最优线路
+
+#### 使用 obfs 混淆（simple-obfs）
+
+obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-obfs 的客户端 `obfs-local`。除了上面的加密参数外，还需要：
+
+1. 设备上安装插件程序，提供 `/usr/bin/obfs-local`
+2. 服务器端同时运行 `obfs-server`，参数与客户端对应
+3. 在服务器配置里把 Plugin 选为 `obfs-local`，并填写 Plugin Options
+
+| 配置项 | 示例值 |
+|--------|--------|
+| Plugin | `obfs-local` |
+| Plugin Options | `obfs=http;obfs-host=www.bing.com` |
+
+`Plugin Options` 直接传给 simple-obfs，常用参数：
+
+- `obfs=http` 或 `obfs=tls`：混淆方式
+- `obfs-host=www.bing.com`：伪装域名，`http` 模式下建议填
+
+生成的 `config.json` 会带上对应字段：
+
+```json
+{
+  "server": "1.2.3.4",
+  "server_port": 8388,
+  "password": "password",
+  "method": "aes-256-gcm",
+  "plugin": "obfs-local",
+  "plugin_opts": "obfs=http;obfs-host=www.bing.com"
+}
+```
+
+> ⚠️ 插件没安装时启动日志会提示 `plugin obfs-local is not installed`；手动写了其它插件名会被忽略并记录 `unsupported plugin ...` 错误
+>
+> ⚠️ simple-obfs 只处理 TCP，使用 obfs 时该服务器的 UDP 流量（UDP 转发、UDP DNS）无法通过插件，会直连服务器并失败
 
 ### 高级设置
 

@@ -127,11 +127,19 @@ var page = view.extend({
         o.password = true;
         o.modalonly = true;
 
-        // o = s.option(form.Value, 'plugin', _('Plugin'));
-        // o.modalonly = true;
-        //
-        // o = s.option(form.Value, 'plugin_opts', _('Plugin Options'));
-        // o.modalonly = true;
+        o = s.option(form.ListValue, 'plugin', _('Plugin'),
+            _('Only obfs-local from simple-obfs is supported for now. The plugin program has to be installed on this device. Leave empty to disable.'));
+        o.value('', _('none'));
+        o.value('obfs-local', 'obfs-local');
+        o.rmempty = true;
+        o.modalonly = true;
+
+        o = s.option(form.Value, 'plugin_opts', _('Plugin Options'),
+            _('simple-obfs options, for example obfs=http;obfs-host=www.bing.com. The obfs value is http or tls.'));
+        o.placeholder = 'obfs=http;obfs-host=www.bing.com';
+        o.depends('plugin', 'obfs-local');
+        o.rmempty = true;
+        o.modalonly = true;
 
         s = m.section(form.NamedSection, 'settings', "conf", _('Advanced Settings'),
             _('Acl rules and more settings'));
