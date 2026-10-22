@@ -103,6 +103,8 @@ opkg install nftables kmod-nft-tproxy
 
 > 💡 建议同时配置 IPv4 和 IPv6 服务器，系统会自动选择最优线路
 
+> ⚠️ 加密方式下拉框只列出当前 sslocal 二进制真正支持的方式。`bf-cfb`、`salsa20`（上游已移除）、`aes-192-gcm`（上游没有这个）、`xchacha20-ietf-poly1305`（需要非默认的 aead-cipher-extra 特性）会让 sslocal 直接拒绝启动，因此不在列表中。如果之前用的是这些方式，升级后需要手动改成一个受支持的方式
+
 #### 使用 obfs 混淆（simple-obfs）
 
 obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-obfs 的客户端 `obfs-local`。除了上面的加密参数外，还需要：

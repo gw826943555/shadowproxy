@@ -5,6 +5,20 @@
 'require rpc';
 'require uci';
 
+// Encryption methods accepted by the sslocal build (shadowsocks-rust with the
+// default "full" feature set). sslocal refuses to start when it sees an
+// unknown method, so this list must only contain methods the binary really
+// supports -- check with:
+//
+//     sslocal --help | grep -A5 'encrypt-method'
+//
+// Not offered here on purpose:
+//   bf-cfb, salsa20        removed upstream, no longer compiled in
+//   aes-192-gcm            never existed, upstream only has 128/256 bit GCM
+//   xchacha20-ietf-poly1305  needs the non-default aead-cipher-extra feature
+//
+// The binary supports a few more exotic ones (aes-*-ofb, aes-*-cfb1/cfb8/
+// cfb128, camellia-*-ctr/ofb); add them here if they are ever needed.
 var methods = [
     "none",
     "table",
@@ -16,18 +30,13 @@ var methods = [
     "aes-128-ctr",
     "aes-192-ctr",
     "aes-256-ctr",
-    "aes-128-gcm",
-    "aes-192-gcm",
-    "aes-256-gcm",
     "camellia-128-cfb",
     "camellia-192-cfb",
     "camellia-256-cfb",
-    "bf-cfb",
-    "salsa20",
-    "chacha20",
     "chacha20-ietf",
+    "aes-128-gcm",
+    "aes-256-gcm",
     "chacha20-ietf-poly1305",
-    "xchacha20-ietf-poly1305",
     "2022-blake3-aes-128-gcm",
     "2022-blake3-aes-256-gcm",
     "2022-blake3-chacha20-poly1305",
