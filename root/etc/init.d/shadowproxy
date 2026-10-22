@@ -15,6 +15,9 @@ NAME=shadowproxy
 
 CONF_DIR=/etc/$NAME
 SERVERS_TMP=/tmp/$NAME-servers.$$
+DNSMASQ_CONF=/etc/dnsmasq.conf
+DNSMASQ_CONF_BEGIN="# BEGIN shadowproxy"
+DNSMASQ_CONF_END="# END shadowproxy"
 TPROXY_PORT=60080
 DNS_PORT=5300
 SERVER_LIST_V4=""
@@ -41,14 +44,12 @@ parse_config_main() {
   local redir_port
   local dns_port
   local dns_remote_addr
-  local dns_local_addr
   local socks_port
   local http_port
 
   config_get redir_port "$section_name" redir_port
   config_get dns_port "$section_name" dns_port
   config_get dns_remote_addr "$section_name" dns_remote_addr
-  config_get dns_local_addr "$section_name" dns_local_addr
   config_get socks_port "$section_name" socks_port
   config_get http_port "$section_name" http_port
 
@@ -80,7 +81,6 @@ parse_config_main() {
   sed -i "s/\"{redir_port}\"/${redir_port}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{dns_port}\"/${dns_port}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{dns_remote_addr}\"/\"${dns_remote_addr}\"/g" "$CONF_DIR/config.json"
-  sed -i "s/\"{dns_local_addr}\"/\"${dns_local_addr}\"/g" "$CONF_DIR/config.json"
 }
 
 parse_config_extra() {
@@ -291,22 +291,48 @@ update_nftables() {
   fi
 }
 
-update_proxy_domains() {
-  cp -f "$CONF_DIR/shadowproxy-dns-base.acl" "$CONF_DIR/shadowproxy-dns.acl"
+update_dnsmasq_rules() {
+  # Only the domains listed in the LuCI page are resolved by sslocal (through
+  # the tunnel) and get proxied. dnsmasq keeps resolving everything else with
+  # its own upstream and adds the addresses of the listed domains to the nft
+  # sets, so the firewall only redirects the traffic of those domains.
+  local domain
+  local tmp
 
-  domain_list=""
-  for item in $(grep -v '^$' /etc/shadowproxy/proxy_domains.acl | grep -v '^#'); do
-    # escape two times
-    domain="$(echo ".${item}" | sed 's/\./\\\\\./g')"
-    _info "proxy domain: $domain"
+  tmp=/tmp/$NAME-dnsmasq.$$
+  : > "$tmp"
 
-    if [ -n "${domain_list}" ]; then
-      domain_list="${domain_list}\n"
+  [ -f "$CONF_DIR/proxy_domains.acl" ] || {
+    rm -f "$tmp"
+    return 0
+  }
+
+  while read -r domain; do
+    domain=$(printf '%s' "$domain" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    [ -z "$domain" ] && continue
+    case "$domain" in \#*) continue ;; esac
+    if ! printf '%s' "$domain" | grep -qE '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$'; then
+      _error "invalid proxy domain '${domain}', skipped"
+      continue
     fi
-    domain_list="${domain_list}${domain}"
-  done
+    echo "server=/${domain}/127.0.0.1#${DNS_PORT}" >> "$tmp"
+    echo "nftset=/${domain}/4#inet#shadowproxy-mangle#proxy_set4,6#inet#shadowproxy-mangle#proxy_set6" >> "$tmp"
+  done < "$CONF_DIR/proxy_domains.acl"
 
-  sed -i "s/{proxy_domains}/${domain_list}/g" "$CONF_DIR/shadowproxy-dns.acl"
+  # Replace our own block in /etc/dnsmasq.conf, keep everything else intact
+  [ -f "$DNSMASQ_CONF" ] &&
+    sed -i "/^${DNSMASQ_CONF_BEGIN}\$/,/^${DNSMASQ_CONF_END}\$/d" "$DNSMASQ_CONF"
+  {
+    echo "$DNSMASQ_CONF_BEGIN"
+    cat "$tmp"
+    echo "$DNSMASQ_CONF_END"
+  } >> "$DNSMASQ_CONF"
+  rm -f "$tmp"
+}
+
+remove_dnsmasq_rules() {
+  [ -f "$DNSMASQ_CONF" ] || return 0
+  sed -i "/^${DNSMASQ_CONF_BEGIN}\$/,/^${DNSMASQ_CONF_END}\$/d" "$DNSMASQ_CONF"
 }
 
 start_shadowproxy() {
@@ -322,30 +348,10 @@ start_shadowproxy() {
   procd_close_instance
 }
 
-set_dnsmasq() {
-  addr="127.0.0.1#$DNS_PORT"
-  # space in suffix is important
-  OLD_SERVER="$(uci -q get dhcp.@dnsmasq[0].server) "
-  if echo "$OLD_SERVER" | grep "^$addr " >/dev/null 2>&1; then
-    return
-  fi
-
-  uci -q delete dhcp.@dnsmasq[0].server
-  uci -q add_list dhcp.@dnsmasq[0].server="$addr"
-  uci -q set dhcp.@dnsmasq[0].noresolv=1
-  uci commit dhcp
-  /etc/init.d/dnsmasq reload
-}
-
-unset_dnsmasq() {
-  # the shadowproxy is enabled, do not
-#  if [ "$ENABLED" = "1" ]; then
-#    return 0
-#  fi
-
-  uci -q delete dhcp.@dnsmasq[0].server
-  uci -q delete dhcp.@dnsmasq[0].noresolv
-  uci commit dhcp
+# The dnsmasq configuration itself is not touched, only our own block in
+# /etc/dnsmasq.conf is (re)written, so the upstream servers and the noresolv
+# setting of the user are left alone.
+reload_dnsmasq() {
   /etc/init.d/dnsmasq reload
 }
 
@@ -371,18 +377,21 @@ start_service() {
   config_sysctl
   config_route
   update_nftables
-  update_proxy_domains
   start_shadowproxy
-  set_dnsmasq
+  # sslocal has to be up before dnsmasq starts forwarding the listed domains
+  update_dnsmasq_rules
+  reload_dnsmasq
 }
 
 stop_service() {
   _info "stop shadowproxy service."
 
+  remove_dnsmasq_rules
+  reload_dnsmasq
+
   if [ -n "$(nft list tables | grep shadowproxy-mangle)" ]; then
     nft delete table inet shadowproxy-mangle
   fi
-  unset_dnsmasq
 }
 
 service_triggers() {

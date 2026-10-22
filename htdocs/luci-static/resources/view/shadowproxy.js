@@ -110,12 +110,7 @@ var page = view.extend({
         o.rmempty = false;
 
         o = s.option(form.Value, 'dns_remote_addr', _('DNS Remote Server'),
-            _('dns remote proxy server ip address'))
-        o.datatype = 'ipaddr';
-        o.rmempty = false;
-
-        o = s.option(form.Value, 'dns_local_addr', _('DNS Local Server'),
-            _('dns local server ip address'))
+            _('dns server used to resolve the proxied domains, the queries go through the tunnel'))
         o.datatype = 'ipaddr';
         o.rmempty = false;
 
@@ -170,11 +165,21 @@ var page = view.extend({
 
         var proxy_domain_file = '/etc/shadowproxy/proxy_domains.acl'
         o = s.taboption("domain", form.TextValue, 'proxy_domain_list', "",
-            _("proxy the target domains"));
+            _("domains to proxy, one per line, for example google.com. The domain and all its subdomains are resolved through the tunnel and proxied, every other domain is resolved and accessed directly."));
         o.rows = 32;
         o.monospace = true;
         o.cfgvalue = function (section_id) {
             return fs.trimmed(proxy_domain_file);
+        };
+        o.validate = function (section_id, value) {
+            var lines = (value || '').split('\n');
+            for (var i = 0; i < lines.length; i++) {
+                var d = lines[i].trim();
+                if (d === '' || d.charAt(0) === '#') continue;
+                if (!/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$/.test(d))
+                    return _('Invalid domain: %s').format(d);
+            }
+            return true;
         };
         o.write = function (section_id, formvalue) {
             return this.cfgvalue(section_id).then(function (value) {

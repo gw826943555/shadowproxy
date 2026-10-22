@@ -6,7 +6,7 @@ OpenWrt 透明代理解决方案，基于 shadowsocks-rust，提供 LuCI 图形�
 
 - 🚀 基于 shadowsocks-rust 的高性能透明代理
 - 🌐 支持 TCP/UDP 透明代理 (tproxy)
-- 🔍 智能 DNS 分流（国内直连，国外代理）
+- 🔍 智能 DNS 分流（白名单域名走隧道，其余直连）
 - 📋 ACL 规则支持（域名、IP 分流）
 - 🖥️ LuCI 图形界面配置
 - ⚡ 支持 SOCKS5 和 HTTP 代理
@@ -81,14 +81,13 @@ opkg install nftables kmod-nft-tproxy
 1. 打开 LuCI 界面：`服务` → `ShadowProxy`
 2. 在「主设置」中配置：
    - **启用**：开启服务
-   - **本地 DNS**：国内 DNS 服务器（如 `223.5.5.5`，阿里 DNS）
-   - **远程 DNS**：国外 DNS 服务器（如 `1.1.1.1`，Cloudflare DNS）
+   - **远程 DNS**：国外 DNS 服务器（如 `1.1.1.1`，Cloudflare DNS），用于解析「代理域名」列表里的域名，查询会走隧道
    - **透明代理端口**：默认 `60080`
    - **DNS 端口**：默认 `5300`
    - **SOCKS5 端口**：可选，设为 `0` 禁用
    - **HTTP 代理端口**：可选，设为 `0` 禁用
 
-> 💡 本地 DNS 可在 `/tmp/resolv.conf.ppp` 或 `/tmp/resolv.conf.d/resolv.conf.auto` 中查看运营商分配的 DNS
+> 💡 本地 DNS（非代理域名）由 dnsmasq 按照 `/etc/config/dhcp` 里的配置解析，ShadowProxy 不再接管 dnsmasq 的上游设置。
 
 ### 节点配置（Nodes 标签页）
 
@@ -171,10 +170,7 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 | `config-template.json` | shadowsocks-rust 配置模板 |
 | `config.json` | 运行时生成的配置文件 |
 | `shadowproxy-redir.acl` | 透明代理 ACL 规则 |
-| `shadowproxy-dns.acl` | DNS 分流 ACL 规则 |
 | `bypass_ipset.acl` | 绕过代理的 IP 列表 |
-| `chnip4.ips` | 中国 IPv4 地址段 |
-| `chnip6.ips` | 中国 IPv6 地址段 |
 | `shadowproxy.nft` | nftables 规则 |
 
 ## 服务管理
@@ -823,16 +819,15 @@ opkg install nftables kmod-nft-tproxy
 ### DNS 解析原理
 
 ```
-[客户端] → [dnsmasq] → [ShadowProxy DNS(5300)] → 根据 ACL 规则分流
-                                                   ├─ 国内域名 → 本地 DNS
-                                                   └─ 国外域名 → 代理远程 DNS
+[客户端] → [dnsmasq] ── 国内域名 → 默认上游 DNS（直连）
+                  └─ 代理域名   → [ShadowProxy DNS(5300)] → 远程 DNS（走隧道）
+                                                     └─ 解析到的 IP 写入 nft set，流量走代理
 ```
 
 ### 自定义分流规则
 
 - 修改 `bypass_ipset.acl` 添加绕过代理的 IP
-- 修改 `chnip4.ips` / `chnip6.ips` 更新中国 IP 段
-- 修改 `proxy_domains.acl` 添加需要代理的域名
+- 修改 `proxy_domains.acl` 添加需要代理的域名（域名及其子域名的查询会走隧道，解析到的 IP 会被加入代理 nft set）
 
 ### 为什么不推荐使用插件？
 

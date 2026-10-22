@@ -24,11 +24,10 @@
       "local_address": "::",
       "local_port": "{dns_port}",
       "protocol": "dns",
-      "local_dns_address": "{dns_local_addr}",
+      "local_dns_address": "{dns_remote_addr}",
       "local_dns_port": 53,
       "remote_dns_address": "{dns_remote_addr}",
       "remote_dns_port": 53,
-      "acl": "/etc/shadowproxy/shadowproxy-dns.acl",
       "client_cache_size": "{client_cache_size}",
       "mode": "udp_only"
     }
