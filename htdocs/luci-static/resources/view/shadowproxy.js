@@ -258,6 +258,11 @@ var page = view.extend({
         o.rmempty = false;
         o.optional = true;
 
+        o = s.taboption("advanced_confs", form.DynamicList, 'proxy_ip', _('Force Proxy IP/CIDR'),
+            _('IP addresses or CIDR ranges that will always be forced through the proxy tunnel.'));
+        o.rmempty = true;
+        o.optional = true;
+
         return m.render();
     }
 });

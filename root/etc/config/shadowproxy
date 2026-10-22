@@ -5,6 +5,8 @@ config conf main
     option redir_port '60080'
     option dns_port '5300'
     option dns_remote_addr '1.1.1.1'
+    list proxy_ip '8.8.8.8'
+    list proxy_ip '1.1.1.1'
 
 config node
     option enabled '1'

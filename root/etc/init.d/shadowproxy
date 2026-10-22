@@ -289,6 +289,20 @@ update_nftables() {
   if [ -n "${ALLOWED_PORTS}" ]; then
     nft add element inet shadowproxy-mangle udp_ports_set \{ "$ALLOWED_PORTS" \}
   fi
+
+  # Add user-configured IPs/CIDRs that should always be proxied
+  local proxy_ips
+  config_get proxy_ips "main" proxy_ip
+  for ip in $proxy_ips; do
+    case "$ip" in
+      *:*)
+        nft add element inet shadowproxy-mangle proxy_set6 \{ "$ip" \} 2>/dev/null || true
+        ;;
+      *)
+        nft add element inet shadowproxy-mangle proxy_set4 \{ "$ip" \} 2>/dev/null || true
+        ;;
+    esac
+  done
 }
 
 update_dnsmasq_rules() {

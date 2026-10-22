@@ -154,6 +154,7 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 | nofile | 最大文件描述符 | 10240 |
 | fast_open | TCP Fast Open | 禁用 |
 | mptcp | 多路径 TCP | 禁用 |
+| proxy_ip | 强制走代理的 IP/CIDR 列表 | 空 |
 
 > 💡 `worker_count` 设得比 CPU 核数大只会浪费内存和调度开销，不会提升吞吐。调优细节见 [性能调优](#性能调优)
 
