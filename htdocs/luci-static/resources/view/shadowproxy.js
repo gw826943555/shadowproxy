@@ -125,12 +125,17 @@ var page = view.extend({
 
         o = s.option(form.Value, 'server', _('Server'));
         o.datatype = 'host';
+        o.rmempty = false;
 
+        // range(1,65535), not 'port': the port datatype also accepts 0, but
+        // a server port of 0 makes sslocal reject the whole config.
         o = s.option(form.Value, 'server_port', _('Port'));
-        o.datatype = 'port';
+        o.datatype = 'range(1,65535)';
+        o.rmempty = false;
 
         o = s.option(form.ListValue, 'method', _('Method'));
         methods.forEach(m => o.value(m));
+        o.rmempty = false;
 
         o = s.option(form.Value, 'password', _('Password'));
         o.password = true;
