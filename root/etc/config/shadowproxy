@@ -7,21 +7,21 @@ config conf main
     option dns_remote_addr '1.1.1.1'
     option dns_local_addr '223.5.5.5'
 
-config server
+config node
     option enabled '1'
     option server '45.32.222.22'
     option server_port '8388'
     option password 'barfoo!'
     option method 'rc4-md5'
 
-config server
+config node
     option enabled '0'
     option server '2001:19f0:5001:46b:4:3:2:1'
     option server_port '8388'
     option password 'barfoo!'
     option method 'rc4-md5'
 
-config conf settings
+config advanced settings
     # 建议设为 CPU 核数。设得远高于核数只会增加线程栈和调度开销:
     # 64 个 worker 在 4 核路由器上会多占约 500MB 虚拟内存，吞吐并不会变高
     option worker_count '4'

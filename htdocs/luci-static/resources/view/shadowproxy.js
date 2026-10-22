@@ -59,6 +59,9 @@ var page = view.extend({
 
         m = new form.Map('shadowproxy', _('ShadowProxy'),
             _('ShadowProxy Configuration for tproxy redir and dns'));
+        // Render every section as its own tab. The tab id is the UCI section
+        // type, so all of them have to be unique.
+        m.tabbed = true;
 
         s = m.section(form.NamedSection, 'main', "conf",  _('Main Settings'));
         s.anonymous = true;
@@ -116,14 +119,15 @@ var page = view.extend({
         o.datatype = 'ipaddr';
         o.rmempty = false;
 
-        s = m.section(form.GridSection, 'server', _('Servers'));
+        s = m.section(form.GridSection, 'node', _('Nodes'));
         s.anonymous = true;
         s.addremove = true;
 
         o = s.option(form.Flag, 'enabled', _('Enable'));
         o.editable = true;
 
-        o = s.option(form.Value, 'server', _('Server'));
+        o = s.option(form.Value, 'server', _('Server'),
+            _('address of the remote shadowsocks node, IPv4, IPv6 or hostname'));
         o.datatype = 'host';
         o.rmempty = false;
 
@@ -155,7 +159,9 @@ var page = view.extend({
         o.rmempty = true;
         o.modalonly = true;
 
-        s = m.section(form.NamedSection, 'settings', "conf", _('Advanced Settings'),
+        // The UCI section type doubles as the tab id, so it must differ from
+        // the type of the 'main' section above.
+        s = m.section(form.NamedSection, 'settings', "advanced", _('Advanced Settings'),
             _('Acl rules and more settings'));
         s.anonymous = true;
         s.tab('domain', _('Proxy Domain'));

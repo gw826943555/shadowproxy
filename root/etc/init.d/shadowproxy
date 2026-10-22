@@ -125,7 +125,7 @@ parse_config_extra() {
 
 SERVER_LIST_STR=""
 
-parse_config_server() {
+parse_config_node() {
   section_name="$1"
   local server
   local server_port
@@ -145,26 +145,22 @@ parse_config_server() {
   config_get enabled $section_name enabled
 
   # Only the simple-obfs client is supported for now.
-  case "${plugin}" in
-    ""|none) plugin="" ;;
-    obfs-local) ;;
-    *)
-      _error "unsupported plugin ${plugin}, only obfs-local is supported, ignoring it"
-      plugin=""
-      plugin_opts=""
-      ;;
-  esac
+  if [ -n "${plugin}" ] && [ "${plugin}" != "obfs-local" ]; then
+    _error "unsupported plugin ${plugin}, only obfs-local is supported, ignoring it"
+    plugin=""
+    plugin_opts=""
+  fi
 
   if [ "${enabled}" = '1' ]; then
     # A malformed server entry makes sslocal abort the whole instance, which
     # would take down every other server as well. Skip such entries.
     if [ -z "${server}" ] || [ -z "${method}" ]; then
-      _error "server section ${section_name} misses server address or method, skipped"
+      _error "node section ${section_name} misses server address or method, skipped"
       return
     fi
     if ! echo "${server_port}" | grep -qE '^[0-9]+$' ||
       [ "${server_port}" -lt 1 ] || [ "${server_port}" -gt 65535 ]; then
-      _error "server section ${section_name} has an invalid port '${server_port}', skipped"
+      _error "node section ${section_name} has an invalid port '${server_port}', skipped"
       return
     fi
 
@@ -178,7 +174,7 @@ parse_config_server() {
 
     if [ -n "${plugin}" ]; then
       if ! command -v "${plugin}" >/dev/null 2>&1; then
-        _error "plugin ${plugin} is not installed, server ${server} will not work"
+        _error "plugin ${plugin} is not installed, node ${server} will not work"
       fi
     fi
 
@@ -220,7 +216,7 @@ generate_config_json() {
   parse_config_main main
   parse_config_extra settings
 
-  config_foreach parse_config_server server
+  config_foreach parse_config_node node
 
   # Splice the servers block in with awk: the plugin options contain
   # characters that are special to a sed replacement (';', '&', '|', '/'),

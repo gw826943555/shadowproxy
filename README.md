@@ -90,16 +90,20 @@ opkg install nftables kmod-nft-tproxy
 
 > 💡 本地 DNS 可在 `/tmp/resolv.conf.ppp` 或 `/tmp/resolv.conf.d/resolv.conf.auto` 中查看运营商分配的 DNS
 
-### 服务器配置
+### 节点配置（Nodes 标签页）
 
-1. 在「服务器」标签页添加 Shadowsocks 服务器
-2. 填写服务器信息：
-   - **服务器地址**：支持 IPv4 和 IPv6
+> 💡 LuCI 页面现在是分标签的：**Main Settings** / **Nodes** / **Advanced Settings**
+
+1. 在「Nodes」标签页添加 Shadowsocks 节点
+2. 填写节点信息：
+   - **Server**：远程节点的地址，支持 IPv4、IPv6 和域名
    - **端口**：服务器端口
    - **密码**：连接密码
    - **加密方式**：推荐 `aes-256-gcm` 或 `chacha20-ietf-poly1305`
    - **Plugin**：可选，目前仅支持 `obfs-local`（simple-obfs）
    - **Plugin Options**：插件参数，如 `obfs=http;obfs-host=www.bing.com`
+
+> 💡 远程节点在 UCI 里是 `config node` 段（地址选项仍叫 `server`），这样和本机运行的 shadowsocks 服务端区分得开
 
 > 💡 建议同时配置 IPv4 和 IPv6 服务器，系统会自动选择最优线路
 
@@ -111,7 +115,7 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 
 1. 设备上安装插件程序，提供 `/usr/bin/obfs-local`
 2. 服务器端同时运行 `obfs-server`，参数与客户端对应
-3. 在服务器配置里把 Plugin 选为 `obfs-local`，并填写 Plugin Options
+3. 在节点配置里把 Plugin 选为 `obfs-local`，并填写 Plugin Options
 
 | 配置项 | 示例值 |
 |--------|--------|
