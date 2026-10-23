@@ -63,7 +63,8 @@ var page = view.extend({
         // type, so all of them have to be unique.
         m.tabbed = true;
 
-        s = m.section(form.NamedSection, 'main', "conf",  _('Main Settings'));
+        // Basic network settings (UCI: config conf main)
+        s = m.section(form.NamedSection, 'main', "conf", _('Basic Network Settings'));
         s.anonymous = true;
 
         o = s.option(form.Flag, 'running', _('Enabled'));
@@ -114,7 +115,10 @@ var page = view.extend({
         o.datatype = 'ipaddr';
         o.rmempty = false;
 
-        // Advanced configuration (moved here from the old "Advanced Settings" tab)
+        // Proxy behavior settings (UCI: config settings global)
+        s = m.section(form.NamedSection, 'global', "settings", _('Proxy Behavior Settings'));
+        s.anonymous = true;
+
         o = s.option(form.Value, 'worker_count', _('Worker Count'),
             _('thread worker count for processing connections'));
         o.datatype = 'range(1,1024)';
@@ -146,11 +150,6 @@ var page = view.extend({
             _('max allowed sockets limit'));
         o.datatype = 'range(512,20480)';
         o.rmempty = false;
-
-        o = s.option(form.DynamicList, 'proxy_ip', _('Force Proxy IP/CIDR'),
-            _('IP addresses or CIDR ranges that will always be forced through the proxy tunnel.'));
-        o.rmempty = true;
-        o.optional = true;
 
         s = m.section(form.GridSection, 'node', _('Nodes'));
         s.anonymous = true;
@@ -194,66 +193,80 @@ var page = view.extend({
 
         // The UCI section type doubles as the tab id, so it must differ from
         // the type of the 'main' section above.
-        s = m.section(form.NamedSection, 'settings', "settings", _('Rules'),
+        s = m.section(form.NamedSection, 'settings', "rules", _('Rules'),
             _('Proxy domain and bypass rules'));
         s.anonymous = true;
         s.tab('domain', _('Proxy Domain'));
+        s.tab('bypass_domain', _('Bypass Domain'));
         s.tab('bypass_ipset', _('Bypass Ipset'));
+        s.tab('proxy_ipset', _('Proxy Ipset'));
 
-        var proxy_domain_file = '/etc/shadowproxy/proxy_domains.acl'
-        o = s.taboption("domain", form.TextValue, 'proxy_domain_list', "",
-            _("domains to proxy, one per line, for example google.com. The domain and all its subdomains are resolved through the tunnel and proxied, every other domain is resolved and accessed directly."));
-        o.rows = 32;
-        o.monospace = true;
+        var G = 'shadowproxy';
+        var GSEC = 'settings';
+
+        // Proxy Domain (stored in UCI section 'config rules')
+        o = s.taboption("domain", form.DynamicList, 'proxy_domain', _("Proxy Domain"),
+            _("Domains and subdomains resolved through the tunnel."));
+        o.rmempty = true;
+        o.optional = true;
         o.cfgvalue = function (section_id) {
-            return fs.trimmed(proxy_domain_file);
-        };
-        o.validate = function (section_id, value) {
-            var lines = (value || '').split('\n');
-            for (var i = 0; i < lines.length; i++) {
-                var d = lines[i].trim();
-                if (d === '' || d.charAt(0) === '#') continue;
-                if (!/^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$/.test(d))
-                    return _('Invalid domain: %s').format(d);
-            }
-            return true;
+            var v = uci.get(G, GSEC, 'proxy_domain');
+            if (Array.isArray(v)) return v.join('\n');
+            return v || '';
         };
         o.write = function (section_id, formvalue) {
-            return this.cfgvalue(section_id).then(function (value) {
-                if (value == formvalue) {
-                    return
-                }
-                // trigger the config value to allow save&apply
-                var v = uci.get("shadowproxy", section_id, "proxy_domain_list");
-                if (v == "0") {
-                    uci.set("shadowproxy", section_id, "proxy_domain_list", "1");
-                } else {
-                    uci.set("shadowproxy", section_id, "proxy_domain_list", "0");
-                }
-                return fs.write(proxy_domain_file, formvalue.trim().replace(/\r\n/g, '\n') + '\n');
+            var lines = (formvalue || '').split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+            uci.delete(G, GSEC, 'proxy_domain');
+            lines.forEach(function(line) {
+                uci.set(G, GSEC, 'proxy_domain', line);
             });
         };
 
-        var bypass_ipset_file = '/etc/shadowproxy/bypass_ipset.acl';
-        o = s.taboption("bypass_ipset", form.TextValue, 'bypass_ipset_list', "",
-            _('bypass the ipv4 and ipv6 address'));
-        o.rows = 32;
-        o.monospace = true;
+        // Bypass Ipset (stored in UCI section 'config rules')
+        o = s.taboption("bypass_ipset", form.DynamicList, 'bypass_ipset', _("Bypass Ipset"),
+            _("IP/CIDR ranges bypassing the proxy."));
+        o.rmempty = true;
+        o.optional = true;
         o.cfgvalue = function (section_id) {
-            return fs.trimmed(bypass_ipset_file);
+            var v = uci.get(G, GSEC, 'bypass_ipset');
+            if (Array.isArray(v)) return v.join('\n');
+            return v || '';
         };
         o.write = function (section_id, formvalue) {
-            return this.cfgvalue(section_id).then(function (value) {
-                if (value == formvalue) {
-                    return
-                }
-                var v = uci.get("shadowproxy", section_id, "bypass_ipset_list");
-                if (v == "0") {
-                    uci.set("shadowproxy", section_id, "bypass_ipset_list", "1");
-                } else {
-                    uci.set("shadowproxy", section_id, "bypass_ipset_list", "0");
-                }
-                return fs.write(bypass_ipset_file, formvalue.trim().replace(/\r\n/g, '\n') + '\n');
+            var lines = (formvalue || '').split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+            uci.delete(G, GSEC, 'bypass_ipset');
+            lines.forEach(function(line) {
+                uci.set(G, GSEC, 'bypass_ipset', line);
+            });
+        };
+
+        // Proxy Ipset (stored in UCI section 'config rules')
+        o = s.taboption("proxy_ipset", form.DynamicList, 'proxy_ipset', _("Proxy Ipset"),
+            _("IP/CIDR ranges forced through the proxy tunnel."));
+        o.rmempty = true;
+        o.optional = true;
+        o.cfgvalue = function (section_id) {
+            return uci.get(G, GSEC, 'proxy_ipset');
+        };
+        o.write = function (section_id, formvalue) {
+            uci.set(G, GSEC, 'proxy_ipset', formvalue);
+        };
+
+        // Bypass Domain (stored in UCI section 'config rules')
+        o = s.taboption("bypass_domain", form.DynamicList, 'bypass_domain', _("Bypass Domain"),
+            _("Domains and subdomains resolved directly, not through the tunnel."));
+        o.rmempty = true;
+        o.optional = true;
+        o.cfgvalue = function (section_id) {
+            var v = uci.get(G, GSEC, 'bypass_domain');
+            if (Array.isArray(v)) return v.join('\n');
+            return v || '';
+        };
+        o.write = function (section_id, formvalue) {
+            var lines = (formvalue || '').split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+            uci.delete(G, GSEC, 'bypass_domain');
+            lines.forEach(function(line) {
+                uci.set(G, GSEC, 'bypass_domain', line);
             });
         };
 

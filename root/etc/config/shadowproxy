@@ -5,8 +5,8 @@ config conf main
     option redir_port '60080'
     option dns_port '5300'
     option dns_remote_addr '1.1.1.1'
-    list proxy_ip '8.8.8.8'
-    list proxy_ip '1.1.1.1'
+
+config settings global
     # 建议设为 CPU 核数。设得远高于核数只会增加线程栈和调度开销:
     # 64 个 worker 在 4 核路由器上会多占约 500MB 虚拟内存，吞吐并不会变高
     option worker_count '4'
@@ -17,6 +17,16 @@ config conf main
     option nofile '10240'
     option fast_open '0'
     option mptcp '0'
+
+config rules 'settings'
+    list proxy_ipset '8.8.8.8'
+    list proxy_ipset '1.1.1.1'
+    list proxy_domain 'google.com'
+    list proxy_domain 'example.com'
+    list bypass_ipset '10.0.0.0/8'
+    list bypass_ipset '172.16.0.0/12'
+    list bypass_domain 'localhost'
+    list bypass_domain 'local'
 
 config node
     option enabled '1'
@@ -31,5 +41,3 @@ config node
     option server_port '8388'
     option password 'barfoo!'
     option method 'rc4-md5'
-
-config settings settings

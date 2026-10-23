@@ -46,26 +46,12 @@ parse_config_main() {
   local dns_remote_addr
   local socks_port
   local http_port
-  local worker_count
-  local client_cache_size
-  local no_delay
-  local keep_alive
-  local nofile
-  local fast_open
-  local mptcp
 
   config_get redir_port "$section_name" redir_port
   config_get dns_port "$section_name" dns_port
   config_get dns_remote_addr "$section_name" dns_remote_addr
   config_get socks_port "$section_name" socks_port
   config_get http_port "$section_name" http_port
-  config_get worker_count "$section_name" worker_count
-  config_get client_cache_size "$section_name" client_cache_size
-  config_get no_delay "$section_name" no_delay
-  config_get keep_alive "$section_name" keep_alive
-  config_get nofile "$section_name" nofile
-  config_get fast_open "$section_name" fast_open
-  config_get mptcp "$section_name" mptcp
 
   if [ "$redir_port" != "$TPROXY_PORT" ]; then
     TPROXY_PORT=$redir_port
@@ -95,6 +81,27 @@ parse_config_main() {
   sed -i "s/\"{redir_port}\"/${redir_port}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{dns_port}\"/${dns_port}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{dns_remote_addr}\"/\"${dns_remote_addr}\"/g" "$CONF_DIR/config.json"
+}
+
+# Global proxy behavior settings are stored in UCI section 'settings global'.
+parse_config_global() {
+  section_name="$1"
+  local worker_count
+  local client_cache_size
+  local no_delay
+  local keep_alive
+  local nofile
+  local fast_open
+  local mptcp
+
+  config_get worker_count "$section_name" worker_count
+  config_get client_cache_size "$section_name" client_cache_size
+  config_get no_delay "$section_name" no_delay
+  config_get keep_alive "$section_name" keep_alive
+  config_get nofile "$section_name" nofile
+  config_get fast_open "$section_name" fast_open
+  config_get mptcp "$section_name" mptcp
+
   sed -i "s/\"{worker_count}\"/${worker_count}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{client_cache_size}\"/${client_cache_size}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{nofile}\"/${nofile}/g" "$CONF_DIR/config.json"
@@ -116,9 +123,7 @@ parse_config_main() {
   fi
 }
 
-# parse_config_extra is kept for compatibility but all options are now in
-# the 'main' section. The settings section only holds proxy_domain_list and
-# bypass_ipset_list which are written directly to their ACL files by LuCI.
+# parse_config_extra is kept for compatibility but holds no options itself.
 parse_config_extra() {
   :
 }
@@ -214,7 +219,7 @@ generate_config_json() {
   cp "$CONF_DIR/config-template.json" "$CONF_DIR/config.json"
 
   parse_config_main main
-  parse_config_extra settings
+  parse_config_global global
 
   config_foreach parse_config_node node
 
@@ -262,8 +267,10 @@ update_nftables() {
     nft delete table inet shadowproxy-mangle
   fi
   nft -f /etc/shadowproxy/shadowproxy.nft -Dtproxy_port=${TPROXY_PORT}
-  # read the bypass file
-  for item in $(grep -v '^$' /etc/shadowproxy/bypass_ipset.acl | grep -v '^#'); do
+  # read the bypass list from UCI 'config rules bypass_ipset'
+  local bypass_ipsets
+  config_get bypass_ipsets "settings" bypass_ipset
+  for item in $bypass_ipsets; do
     if [ "${item}" = "$(echo $item | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ]; then
       SERVER_LIST_V4="$SERVER_LIST_V4 ${item},"
     elif [ "${item}" = "$(echo $item | grep -E '^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{1,4}$')" ]; then
@@ -281,9 +288,9 @@ update_nftables() {
   fi
 
   # Add user-configured IPs/CIDRs that should always be proxied
-  local proxy_ips
-  config_get proxy_ips "main" proxy_ip
-  for ip in $proxy_ips; do
+  local proxy_ipsets
+  config_get proxy_ipsets "settings" proxy_ipset
+  for ip in $proxy_ipsets; do
     case "$ip" in
       *:*)
         nft add element inet shadowproxy-mangle proxy_set6 \{ "$ip" \} 2>/dev/null || true
@@ -300,28 +307,44 @@ update_dnsmasq_rules() {
   # the tunnel) and get proxied. dnsmasq keeps resolving everything else with
   # its own upstream and adds the addresses of the listed domains to the nft
   # sets, so the firewall only redirects the traffic of those domains.
+  # Domains in bypass_domain are resolved directly, not through the tunnel.
   local domain
   local tmp
+  local proxy_domains
+  local bypass_domains
+  local skip
 
   tmp=/tmp/$NAME-dnsmasq.$$
   : > "$tmp"
 
-  [ -f "$CONF_DIR/proxy_domains.acl" ] || {
-    rm -f "$tmp"
-    return 0
-  }
-
-  while read -r domain; do
+  config_get proxy_domains "settings" proxy_domain
+  config_get bypass_domains "settings" bypass_domain
+  for domain in $proxy_domains; do
     domain=$(printf '%s' "$domain" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
     [ -z "$domain" ] && continue
     case "$domain" in \#*) continue ;; esac
+    # Skip domains in bypass_domain (resolved directly, not through tunnel)
+    skip=0
+    for bd in $bypass_domains; do
+      bd=$(printf '%s' "$bd" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+      [ -z "$bd" ] && continue
+      # Exact match or subdomain match (e.g. bypass example.com skips sub.example.com)
+      if [ "$domain" = "$bd" ]; then
+        skip=1
+        break
+      fi
+      case ".$domain" in
+        *".$bd") skip=1; break ;;
+      esac
+    done
+    [ "$skip" -eq 1 ] && continue
     if ! printf '%s' "$domain" | grep -qE '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$'; then
       _error "invalid proxy domain '${domain}', skipped"
       continue
     fi
     echo "server=/${domain}/127.0.0.1#${DNS_PORT}" >> "$tmp"
     echo "nftset=/${domain}/4#inet#shadowproxy-mangle#proxy_set4,6#inet#shadowproxy-mangle#proxy_set6" >> "$tmp"
-  done < "$CONF_DIR/proxy_domains.acl"
+  done
 
   # Replace our own block in /etc/dnsmasq.conf, keep everything else intact
   [ -f "$DNSMASQ_CONF" ] &&
