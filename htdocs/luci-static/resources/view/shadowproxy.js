@@ -114,6 +114,44 @@ var page = view.extend({
         o.datatype = 'ipaddr';
         o.rmempty = false;
 
+        // Advanced configuration (moved here from the old "Advanced Settings" tab)
+        o = s.option(form.Value, 'worker_count', _('Worker Count'),
+            _('thread worker count for processing connections'));
+        o.datatype = 'range(1,1024)';
+        o.rmempty = false;
+
+        o = s.option(form.Value, 'client_cache_size', _('DNS Client Cache Size'),
+            _('should equals the size of max concurrent udp connections'));
+        o.datatype = 'range(8,4096)';
+        o.rmempty = false;
+
+        o = s.option(form.Flag, 'no_delay', _('TCP No Delay'),
+            _('reuse tcp connections or not'));
+        o.rmempty = false;
+
+        o = s.option(form.Value, 'keep_alive', _('TCP Keep Alive'),
+            _('how many seconds to keep the tcp connection'));
+        o.datatype = 'range(5,180)';
+        o.rmempty = false;
+
+        o = s.option(form.Flag, 'fast_open', _('TCP Fast Open'),
+            _('if platform tcp fast open supported'));
+        o.rmempty = false;
+
+        o = s.option(form.Flag, 'mptcp', _('TCP Mptcp'),
+            _('if platform tcp mptcp supported'));
+        o.rmempty = false;
+
+        o = s.option(form.Value, 'nofile', _('Nofile'),
+            _('max allowed sockets limit'));
+        o.datatype = 'range(512,20480)';
+        o.rmempty = false;
+
+        o = s.option(form.DynamicList, 'proxy_ip', _('Force Proxy IP/CIDR'),
+            _('IP addresses or CIDR ranges that will always be forced through the proxy tunnel.'));
+        o.rmempty = true;
+        o.optional = true;
+
         s = m.section(form.GridSection, 'node', _('Nodes'));
         s.anonymous = true;
         s.addremove = true;
@@ -156,12 +194,11 @@ var page = view.extend({
 
         // The UCI section type doubles as the tab id, so it must differ from
         // the type of the 'main' section above.
-        s = m.section(form.NamedSection, 'settings', "advanced", _('Advanced Settings'),
-            _('Acl rules and more settings'));
+        s = m.section(form.NamedSection, 'settings', "settings", _('Rules'),
+            _('Proxy domain and bypass rules'));
         s.anonymous = true;
         s.tab('domain', _('Proxy Domain'));
         s.tab('bypass_ipset', _('Bypass Ipset'));
-        s.tab('advanced_confs', _('Advanced Configuration'));
 
         var proxy_domain_file = '/etc/shadowproxy/proxy_domains.acl'
         o = s.taboption("domain", form.TextValue, 'proxy_domain_list', "",
@@ -220,52 +257,8 @@ var page = view.extend({
             });
         };
 
-        o = s.taboption("advanced_confs", form.Value, 'worker_count', _('Worker Count'),
-            _('thread worker count for processing connections'));
-        o.datatype = 'range(1,1024)';
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.Value, 'client_cache_size', _('DNS Client Cache Size'),
-            _('should equals the size of max concurrent udp connections'));
-        o.datatype = 'range(8,4096)';
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.Flag, 'no_delay', _('TCP No Delay'),
-            _('reuse tcp connections or not'));
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.Value, 'keep_alive', _('TCP Keep Alive'),
-            _('how many seconds to keep the tcp connection'));
-        o.datatype = 'range(5,180)';
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.Flag, 'fast_open', _('TCP Fast Open'),
-            _('if platform tcp fast open supported'));
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.Flag, 'mptcp', _('TCP Mptcp'),
-            _('if platform tcp mptcp supported'));
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.Value, 'nofile', _('Nofile'),
-            _('max allowed sockets limit'));
-        o.datatype = 'range(512,20480)';
-        o.rmempty = false;
-
-        o = s.taboption("advanced_confs", form.DynamicList, 'allowed_udp_port', _('Allowed UDP Ports'),
-            _('Proxy udp by destination packets port'));
-        o.datatype = 'port';
-        o.rmempty = false;
-        o.optional = true;
-
-        o = s.taboption("advanced_confs", form.DynamicList, 'proxy_ip', _('Force Proxy IP/CIDR'),
-            _('IP addresses or CIDR ranges that will always be forced through the proxy tunnel.'));
-        o.rmempty = true;
-        o.optional = true;
-
         return m.render();
     }
 });
 
 return page;
-

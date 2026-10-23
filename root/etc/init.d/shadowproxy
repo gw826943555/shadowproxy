@@ -46,12 +46,26 @@ parse_config_main() {
   local dns_remote_addr
   local socks_port
   local http_port
+  local worker_count
+  local client_cache_size
+  local no_delay
+  local keep_alive
+  local nofile
+  local fast_open
+  local mptcp
 
   config_get redir_port "$section_name" redir_port
   config_get dns_port "$section_name" dns_port
   config_get dns_remote_addr "$section_name" dns_remote_addr
   config_get socks_port "$section_name" socks_port
   config_get http_port "$section_name" http_port
+  config_get worker_count "$section_name" worker_count
+  config_get client_cache_size "$section_name" client_cache_size
+  config_get no_delay "$section_name" no_delay
+  config_get keep_alive "$section_name" keep_alive
+  config_get nofile "$section_name" nofile
+  config_get fast_open "$section_name" fast_open
+  config_get mptcp "$section_name" mptcp
 
   if [ "$redir_port" != "$TPROXY_PORT" ]; then
     TPROXY_PORT=$redir_port
@@ -81,46 +95,32 @@ parse_config_main() {
   sed -i "s/\"{redir_port}\"/${redir_port}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{dns_port}\"/${dns_port}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{dns_remote_addr}\"/\"${dns_remote_addr}\"/g" "$CONF_DIR/config.json"
-}
-
-parse_config_extra() {
-  section_name="$1"
-
-  local worker_count
-  local client_cache_size
-  local no_delay
-  local keep_alive
-  local nofile
-  local fast_open
-  local mptcp
-
-  config_get worker_count "$section_name" worker_count
-  config_get client_cache_size "$section_name" client_cache_size
-  config_get no_delay "$section_name" no_delay
-  config_get keep_alive "$section_name" keep_alive
-  config_get nofile "$section_name" nofile
-  config_get fast_open "$section_name" fast_open
-  config_get mptcp "$section_name" mptcp
-
   sed -i "s/\"{worker_count}\"/${worker_count}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{client_cache_size}\"/${client_cache_size}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{nofile}\"/${nofile}/g" "$CONF_DIR/config.json"
   sed -i "s/\"{keep_alive}\"/${keep_alive}/g" "$CONF_DIR/config.json"
-  if [ "${no_delay}" == "0" ]; then
+  if [ "${no_delay}" = "0" ]; then
     sed -i "s/\"{no_delay}\"/false/g" "$CONF_DIR/config.json"
   else
     sed -i "s/\"{no_delay}\"/true/g" "$CONF_DIR/config.json"
   fi
-  if [ "${fast_open}" == "0" ]; then
+  if [ "${fast_open}" = "0" ]; then
     sed -i "s/\"{fast_open}\"/false/g" "$CONF_DIR/config.json"
   else
     sed -i "s/\"{fast_open}\"/true/g" "$CONF_DIR/config.json"
   fi
-  if [ "${mptcp}" == "0" ]; then
+  if [ "${mptcp}" = "0" ]; then
     sed -i "s/\"{mptcp}\"/false/g" "$CONF_DIR/config.json"
   else
     sed -i "s/\"{mptcp}\"/true/g" "$CONF_DIR/config.json"
   fi
+}
+
+# parse_config_extra is kept for compatibility but all options are now in
+# the 'main' section. The settings section only holds proxy_domain_list and
+# bypass_ipset_list which are written directly to their ACL files by LuCI.
+parse_config_extra() {
+  :
 }
 
 SERVER_LIST_STR=""
@@ -278,16 +278,6 @@ update_nftables() {
   fi
   if [ -n "${SERVER_LIST_V6}" ]; then
     nft add element inet shadowproxy-mangle whitelist_v6_set \{ "${SERVER_LIST_V6}" \}
-  fi
-
-  local allowed_udp_ports
-  config_get allowed_udp_ports "settings" allowed_udp_port
-  ALLOWED_PORTS=""
-  for port in $allowed_udp_ports; do
-    ALLOWED_PORTS="$ALLOWED_PORTS ${port},"
-  done
-  if [ -n "${ALLOWED_PORTS}" ]; then
-    nft add element inet shadowproxy-mangle udp_ports_set \{ "$ALLOWED_PORTS" \}
   fi
 
   # Add user-configured IPs/CIDRs that should always be proxied
