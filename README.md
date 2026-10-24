@@ -56,13 +56,30 @@ scp bin/<架构>/sslocal root@router:/usr/bin/sslocal
 ssh root@router "chmod +x /usr/bin/sslocal"
 
 # 2. 复制 LuCI 界面文件
-scp -r htdocs/* root@router:/www/
+scp -r luci-app-shadowproxy/htdocs/* root@router:/www/
+scp -r luci-app-shadowproxy/root/* root@router:/
 
-# 3. 复制配置和脚本文件
-scp -r root/* root@router:/
+# 3. 复制后端配置和脚本文件
+scp -r shadowproxy/files/* root@router:/
 
 # 4. 启用服务
 ssh root@router "/etc/init.d/shadowproxy enable"
+```
+
+### 方式三：编译 ipk（OpenWrt 源码 / SDK）
+
+仓库按 LuCI 插件的标准结构组织，目录与包的对应关系：
+
+| 目录 | 软件包 | 说明 |
+|------|--------|------|
+| `luci-app-shadowproxy/` | `luci-app-shadowproxy` | LuCI 界面（`luci.mk`） |
+| `shadowproxy/` | `shadowproxy` | 后端服务、UCI 配置、ucode 防火墙模板 |
+
+把这两个目录放入 feed 或 `package/` 下，然后：
+
+```bash
+make package/shadowproxy/compile V=s
+make package/luci-app-shadowproxy/compile V=s
 ```
 
 ### 依赖安装
