@@ -10,7 +10,7 @@ return view.extend({
         object: "service",
         method: "list",
         params: ["name"],
-        expect: { "shadowproxy": {} }
+        expect: { "shadowsocks-rust": {} }
     }),
 
     load: function() {
@@ -20,8 +20,8 @@ return view.extend({
     render: function (data) {
         var m, s, o;
 
-        m = new form.Map('shadowproxy', _('ShadowProxy'),
-            _('ShadowProxy Configuration for tproxy redir and dns'));
+        m = new form.Map('shadowsocks-rust', _('Shadowsocks-Rust'),
+            _('Shadowsocks-Rust Configuration for tproxy redir and dns'));
 
         // Service Settings
         s = m.section(form.NamedSection, 'main', 'conf', _('Service Settings'));
@@ -30,7 +30,7 @@ return view.extend({
         o = s.option(form.Flag, 'running', _('Enabled'));
         o.cfgvalue = function (section_id) {
             try {
-                return data[0]["instances"]["shadowproxy"]["running"];
+                return data[0]["instances"]["shadowsocks-rust"]["running"];
             } catch (e) {
                 return false;
             }
@@ -41,12 +41,12 @@ return view.extend({
                 return;
             }
             if (formvalue == false) {
-                uci.set("shadowproxy", section_id, "enabled", "0");
+                uci.set("shadowsocks-rust", section_id, "enabled", "0");
             } else {
-                uci.set("shadowproxy", section_id, "enabled", "1");
+                uci.set("shadowsocks-rust", section_id, "enabled", "1");
             }
 
-            return uci.set("shadowproxy", section_id, "running", formvalue);
+            return uci.set("shadowsocks-rust", section_id, "running", formvalue);
         };
         o.rmempty = false;
 

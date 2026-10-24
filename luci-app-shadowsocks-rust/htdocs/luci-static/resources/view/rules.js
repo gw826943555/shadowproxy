@@ -10,8 +10,8 @@ return view.extend({
     render: function() {
         var m, s, o;
 
-        m = new form.Map('shadowproxy', _('ShadowProxy'),
-            _('ShadowProxy Configuration for tproxy redir and dns'));
+        m = new form.Map('shadowsocks-rust', _('Shadowsocks-Rust'),
+            _('Shadowsocks-Rust Configuration for tproxy redir and dns'));
 
         s = m.section(form.NamedSection, 'settings', 'rules', _('Rules'),
             _('Proxy domain, IP and source rules'));

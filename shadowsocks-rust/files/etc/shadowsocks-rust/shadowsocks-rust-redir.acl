@@ -1,5 +1,5 @@
 # Traffic that reaches the redirect instance has already been selected by the
-# nftables rules (see usr/share/shadowproxy/ss-rules), so
+# nftables rules (see usr/share/shadowsocks-rust/ss-rules), so
 # everything arriving here is proxied. The list below only keeps the local
 # networks out of the tunnel.
 

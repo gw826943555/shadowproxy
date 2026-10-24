@@ -8,18 +8,18 @@
       },
       "file": {
         "/usr/bin/sslocal": [ "exec" ],
-        "/etc/shadowproxy/*": ["read"]
+        "/etc/shadowsocks-rust/*": ["read"]
       },
-      "uci": ["shadowproxy"]
+      "uci": ["shadowsocks-rust"]
     },
     "write": {
       "ubus": {
         "uci": [ "set", "commit" ]
       },
       "file": {
-        "/etc/shadowproxy/*": ["write"]
+        "/etc/shadowsocks-rust/*": ["write"]
       },
-      "uci": ["shadowproxy"]
+      "uci": ["shadowsocks-rust"]
     }
   }
 }

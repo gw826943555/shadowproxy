@@ -8,7 +8,7 @@
 include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=LuCI support for shadowsocks-rust TProxy
-LUCI_DESCRIPTION:=Web interface for shadowproxy: basic settings, proxy behavior, nodes and rules.
+LUCI_DESCRIPTION:=Web interface for shadowsocks-rust: basic settings, proxy behavior, nodes and rules.
 LUCI_DEPENDS:=+shadowsocks-rust
 LUCI_PKGARCH:=all
 

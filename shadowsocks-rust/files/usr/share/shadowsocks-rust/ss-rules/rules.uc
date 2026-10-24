@@ -2,16 +2,16 @@
 let uci = require("uci");
 let fs = require("fs");
 
-let dir = "/usr/share/shadowproxy/ss-rules";
+let dir = "/usr/share/shadowsocks-rust/ss-rules";
 let cur = uci.cursor();
 
 function get_opt(sec, name, def) {
-	let v = cur.get("shadowproxy", sec, name);
+	let v = cur.get("shadowsocks-rust", sec, name);
 	return (v == null || v == "") ? def : v;
 }
 
 function get_list(sec, name) {
-	let v = cur.get("shadowproxy", sec, name);
+	let v = cur.get("shadowsocks-rust", sec, name);
 	if (v == null)
 		return [];
 	return type(v) == "array" ? v : split(v, /[ \t\n]+/);
@@ -51,7 +51,7 @@ let private_v6 = [
 	"100::/64", "fe80::/10", "2001::/23", "fc00::/7",
 ];
 
-let cfg = json(fs.readfile("/var/shadowproxy/config.json") || "{}");
+let cfg = json(fs.readfile("/var/shadowsocks-rust/config.json") || "{}");
 
 let lists = {
 	src_bypass: get_list("settings", "src_bypass"),
@@ -80,7 +80,7 @@ let policy = {
 
 let redir_port = get_opt("main", "redir_port", "60080");
 %}
-table inet shadowproxy-mangle {
+table inet shadowsocks-rust-mangle {
 {% include(dir + "/set.uc", { sets: sets }); %}
 {% include(dir + "/chain.uc", { policy: policy, redir_port: redir_port }); %}
 }

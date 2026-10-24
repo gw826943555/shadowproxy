@@ -177,21 +177,21 @@ define Package/shadowsocks-rust/description
 endef
 
 define Package/shadowsocks-rust/conffiles
-/etc/config/shadowproxy
-/etc/shadowproxy/shadowproxy-redir.acl
-/etc/shadowproxy/bypass_ipset.acl
-/etc/shadowproxy/proxy_domains.acl
+/etc/config/shadowsocks-rust
+/etc/shadowsocks-rust/shadowsocks-rust-redir.acl
+/etc/shadowsocks-rust/bypass_ipset.acl
+/etc/shadowsocks-rust/proxy_domains.acl
 endef
 
 define Package/shadowsocks-rust/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_DIR) $(1)/etc/init.d
-	$(INSTALL_DIR) $(1)/etc/shadowproxy
-	$(INSTALL_DIR) $(1)/usr/share/shadowproxy/ss-rules
-	$(INSTALL_CONF) ./files/etc/config/shadowproxy $(1)/etc/config/shadowproxy
-	$(INSTALL_BIN) ./files/etc/init.d/shadowproxy $(1)/etc/init.d/shadowproxy
-	$(INSTALL_CONF) ./files/etc/shadowproxy/* $(1)/etc/shadowproxy/
-	$(INSTALL_DATA) ./files/usr/share/shadowproxy/ss-rules/* $(1)/usr/share/shadowproxy/ss-rules/
+	$(INSTALL_DIR) $(1)/etc/shadowsocks-rust
+	$(INSTALL_DIR) $(1)/usr/share/shadowsocks-rust/ss-rules
+	$(INSTALL_CONF) ./files/etc/config/shadowsocks-rust $(1)/etc/config/shadowsocks-rust
+	$(INSTALL_BIN) ./files/etc/init.d/shadowsocks-rust $(1)/etc/init.d/shadowsocks-rust
+	$(INSTALL_CONF) ./files/etc/shadowsocks-rust/* $(1)/etc/shadowsocks-rust/
+	$(INSTALL_DATA) ./files/usr/share/shadowsocks-rust/ss-rules/* $(1)/usr/share/shadowsocks-rust/ss-rules/
 endef
 
 $(eval $(call BuildPackage,shadowsocks-rust))

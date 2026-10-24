@@ -1,4 +1,4 @@
-# ShadowProxy
+# Shadowsocks-Rust
 
 OpenWrt 透明代理解决方案，基于 shadowsocks-rust，提供 LuCI 图形界面配置。
 
@@ -44,8 +44,8 @@ OpenWrt 透明代理解决方案，基于 shadowsocks-rust，提供 LuCI 图形�
 3. 或通过命令行安装：
 
 ```bash
-scp shadowproxy_*.ipk root@router:/tmp/
-ssh root@router "opkg install /tmp/shadowproxy_*.ipk"
+scp shadowsocks-rust_*.ipk root@router:/tmp/
+ssh root@router "opkg install /tmp/shadowsocks-rust_*.ipk"
 ```
 
 ### 方式二：手动安装
@@ -63,7 +63,7 @@ scp -r luci-app-shadowsocks-rust/root/* root@router:/
 scp -r shadowsocks-rust/files/* root@router:/
 
 # 4. 启用服务
-ssh root@router "/etc/init.d/shadowproxy enable"
+ssh root@router "/etc/init.d/shadowsocks-rust enable"
 ```
 
 ### 方式三：编译 ipk（OpenWrt 源码 / SDK）
@@ -84,7 +84,7 @@ make package/luci-app-shadowsocks-rust/compile V=s
 
 ### 依赖安装
 
-ShadowProxy 依赖 `nftables`，请确保已安装：
+Shadowsocks-Rust 依赖 `nftables`，请确保已安装：
 
 ```bash
 opkg update
@@ -95,7 +95,7 @@ opkg install nftables kmod-nft-tproxy
 
 ### 基础配置
 
-1. 打开 LuCI 界面：`服务` → `ShadowProxy`
+1. 打开 LuCI 界面：`服务` → `Shadowsocks-Rust`
 2. 在「主设置」中配置：
    - **启用**：开启服务
    - **远程 DNS**：国外 DNS 服务器（如 `1.1.1.1`，Cloudflare DNS），用于解析「代理域名」列表里的域名，查询会走隧道
@@ -104,7 +104,7 @@ opkg install nftables kmod-nft-tproxy
    - **SOCKS5 端口**：可选，设为 `0` 禁用
    - **HTTP 代理端口**：可选，设为 `0` 禁用
 
-> 💡 本地 DNS（非代理域名）由 dnsmasq 按照 `/etc/config/dhcp` 里的配置解析，ShadowProxy 不再接管 dnsmasq 的上游设置。
+> 💡 本地 DNS（非代理域名）由 dnsmasq 按照 `/etc/config/dhcp` 里的配置解析，Shadowsocks-Rust 不再接管 dnsmasq 的上游设置。
 
 ### 节点配置（Nodes 标签页）
 
@@ -181,35 +181,35 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 
 ## 配置文件说明
 
-所有配置文件位于 `/etc/shadowproxy/` 目录：
+所有配置文件位于 `/etc/shadowsocks-rust/` 目录：
 
 | 文件 | 说明 |
 |------|------|
-| `config.json` | 运行时生成的配置文件（放在 /var/shadowproxy，避免写 flash） |
-| `shadowproxy-redir.acl` | 透明代理 ACL 规则 |
+| `config.json` | 运行时生成的配置文件（放在 /var/shadowsocks-rust，避免写 flash） |
+| `shadowsocks-rust-redir.acl` | 透明代理 ACL 规则 |
 | `bypass_ipset.acl` | 绕过代理的 IP 列表 |
-| `/usr/share/shadowproxy/ss-rules/` | nftables 规则模板（ucode），渲染结果为 `/var/shadowproxy/shadowproxy.nft` |
+| `/usr/share/shadowsocks-rust/ss-rules/` | nftables 规则模板（ucode），渲染结果为 `/var/shadowsocks-rust/shadowsocks-rust.nft` |
 
 ## 服务管理
 
 ```bash
 # 启动服务
-/etc/init.d/shadowproxy start
+/etc/init.d/shadowsocks-rust start
 
 # 停止服务
-/etc/init.d/shadowproxy stop
+/etc/init.d/shadowsocks-rust stop
 
 # 重启服务
-/etc/init.d/shadowproxy restart
+/etc/init.d/shadowsocks-rust restart
 
 # 查看服务状态
-/etc/init.d/shadowproxy status
+/etc/init.d/shadowsocks-rust status
 
 # 开机自启
-/etc/init.d/shadowproxy enable
+/etc/init.d/shadowsocks-rust enable
 
 # 禁用自启
-/etc/init.d/shadowproxy disable
+/etc/init.d/shadowsocks-rust disable
 ```
 
 ## 搭建 Shadowsocks 服务端
@@ -430,12 +430,12 @@ ssserver -c config.json --outbound-recv-buffer-size 4194304
 
 ### 客户端 (sslocal / OpenWrt) 推荐配置
 
-OpenWrt 侧通过 uci 配置，`/etc/init.d/shadowproxy` 会套用到模板：
+OpenWrt 侧通过 uci 配置，`/etc/init.d/shadowsocks-rust` 会套用到模板：
 
 ```bash
-uci set shadowproxy.settings.worker_count=4     # = CPU 核数
-uci set shadowproxy.settings.no_delay=1
-uci commit shadowproxy && /etc/init.d/shadowproxy restart
+uci set shadowsocks-rust.settings.worker_count=4     # = CPU 核数
+uci set shadowsocks-rust.settings.no_delay=1
+uci commit shadowsocks-rust && /etc/init.d/shadowsocks-rust restart
 ```
 
 `fast_open`（TCP Fast Open）默认关闭，建议保持——很多中间设备会丢弃带 TFO 数据的 SYN，导致首包重传，反而更慢。
@@ -814,7 +814,7 @@ rm -rf /tmp/luci-*
 首次配置时，如果服务器信息不正确，可能导致 DNS 无法解析。
 
 解决方法：
-1. 临时禁用 ShadowProxy：`/etc/init.d/shadowproxy stop`
+1. 临时禁用 Shadowsocks-Rust：`/etc/init.d/shadowsocks-rust stop`
 2. 修正服务器配置
 3. 重新启动服务
 
@@ -837,7 +837,7 @@ opkg install nftables kmod-nft-tproxy
 
 ```
 [客户端] → [dnsmasq] ── 国内域名 → 默认上游 DNS（直连）
-                  └─ 代理域名   → [ShadowProxy DNS(5300)] → 远程 DNS（走隧道）
+                  └─ 代理域名   → [Shadowsocks-Rust DNS(5300)] → 远程 DNS（走隧道）
                                                      └─ 解析到的 IP 写入 nft set，流量走代理
 ```
 

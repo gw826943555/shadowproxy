@@ -30,13 +30,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          path: "shadowproxy"
+          path: "shadowsocks-rust"
 
       - name: Build
         uses: openwrt/gh-action-sdk@main
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
-          PACKAGES: "shadowproxy"
+          PACKAGES: "shadowsocks-rust luci-app-shadowsocks-rust"
           FEED_DIR: ${{ github.workspace }}
 
       - name: Store packages
