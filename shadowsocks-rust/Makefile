@@ -179,8 +179,6 @@ endef
 define Package/shadowsocks-rust/conffiles
 /etc/config/shadowsocks-rust
 /etc/shadowsocks-rust/shadowsocks-rust-redir.acl
-/etc/shadowsocks-rust/bypass_ipset.acl
-/etc/shadowsocks-rust/proxy_domains.acl
 endef
 
 define Package/shadowsocks-rust/install

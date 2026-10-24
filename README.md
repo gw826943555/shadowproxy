@@ -187,7 +187,6 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 |------|------|
 | `config.json` | 运行时生成的配置文件（放在 /var/shadowsocks-rust，避免写 flash） |
 | `shadowsocks-rust-redir.acl` | 透明代理 ACL 规则 |
-| `bypass_ipset.acl` | 绕过代理的 IP 列表 |
 | `/usr/share/shadowsocks-rust/ss-rules/` | nftables 规则模板（ucode），渲染结果为 `/var/shadowsocks-rust/shadowsocks-rust.nft` |
 
 ## 服务管理
@@ -843,8 +842,8 @@ opkg install nftables kmod-nft-tproxy
 
 ### 自定义分流规则
 
-- 修改 `bypass_ipset.acl` 添加绕过代理的 IP
-- 修改 `proxy_domains.acl` 添加需要代理的域名（域名及其子域名的查询会走隧道，解析到的 IP 会被加入代理 nft set）
+- 在 LuCI 的 `Rules` 页面添加代理域名（`Proxy Domain`，域名及其子域名的查询会走隧道，解析到的 IP 会被加入代理 nft set）、绕过 IP（`Bypass Ipset`）等规则
+- 按源 IP 区分流量时，使用 `Source Bypass`、`Source Forward`、`Source Check Destination` 三个标签页
 
 ### 为什么不推荐使用插件？
 
