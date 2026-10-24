@@ -11,6 +11,9 @@ STOP=15
 
 USE_PROCD=1
 
+# OpenWrt 内置的 jshn 库，用于在 generate_config_json() 中动态构建 JSON。
+. /lib/functions.sh
+
 NAME=shadowproxy
 
 CONF_DIR=/etc/$NAME
@@ -34,19 +37,8 @@ _error() {
   logger -p 3 -t $NAME "$1"
 }
 
-# Escape a value so it can be placed between double quotes in JSON.
-json_escape() {
-  printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
-}
-
 parse_config_main() {
   section_name="$1"
-  local redir_port
-  local dns_port
-  local dns_remote_addr
-  local socks_port
-  local http_port
-
   config_get redir_port "$section_name" redir_port
   config_get dns_port "$section_name" dns_port
   config_get dns_remote_addr "$section_name" dns_remote_addr
@@ -61,39 +53,17 @@ parse_config_main() {
     DNS_PORT=$dns_port
   fi
 
-  if [ "$socks_port" != "0" ]; then
-    sed -i "s/\"{socks_disabled}\"/false/g" "$CONF_DIR/config.json"
-    sed -i "s/\"{socks_port}\"/${socks_port}/g" "$CONF_DIR/config.json"
-  else
-    sed -i "s/\"{socks_disabled}\"/true/g" "$CONF_DIR/config.json"
-    sed -i "s/\"{socks_port}\"/1080/g" "$CONF_DIR/config.json"
-  fi
-
-  if [ "$http_port" != "0" ]; then
-    sed -i "s/\"{http_disabled}\"/false/g" "$CONF_DIR/config.json"
-    sed -i "s/\"{http_port}\"/${http_port}/g" "$CONF_DIR/config.json"
-  else
-    sed -i "s/\"{http_disabled}\"/true/g" "$CONF_DIR/config.json"
-    sed -i "s/\"{http_port}\"/1081/g" "$CONF_DIR/config.json"
-  fi
-
-  # sed replace the template string
-  sed -i "s/\"{redir_port}\"/${redir_port}/g" "$CONF_DIR/config.json"
-  sed -i "s/\"{dns_port}\"/${dns_port}/g" "$CONF_DIR/config.json"
-  sed -i "s/\"{dns_remote_addr}\"/\"${dns_remote_addr}\"/g" "$CONF_DIR/config.json"
+  # Expose values for jshn-based JSON generation in generate_config_json.
+  MAIN_REDIR_PORT="$redir_port"
+  MAIN_DNS_PORT="$dns_port"
+  MAIN_DNS_REMOTE_ADDR="$dns_remote_addr"
+  MAIN_SOCKS_PORT="$socks_port"
+  MAIN_HTTP_PORT="$http_port"
 }
 
 # Global proxy behavior settings are stored in UCI section 'settings global'.
 parse_config_global() {
   section_name="$1"
-  local worker_count
-  local client_cache_size
-  local no_delay
-  local keep_alive
-  local nofile
-  local fast_open
-  local mptcp
-
   config_get worker_count "$section_name" worker_count
   config_get client_cache_size "$section_name" client_cache_size
   config_get no_delay "$section_name" no_delay
@@ -101,26 +71,6 @@ parse_config_global() {
   config_get nofile "$section_name" nofile
   config_get fast_open "$section_name" fast_open
   config_get mptcp "$section_name" mptcp
-
-  sed -i "s/\"{worker_count}\"/${worker_count}/g" "$CONF_DIR/config.json"
-  sed -i "s/\"{client_cache_size}\"/${client_cache_size}/g" "$CONF_DIR/config.json"
-  sed -i "s/\"{nofile}\"/${nofile}/g" "$CONF_DIR/config.json"
-  sed -i "s/\"{keep_alive}\"/${keep_alive}/g" "$CONF_DIR/config.json"
-  if [ "${no_delay}" = "0" ]; then
-    sed -i "s/\"{no_delay}\"/false/g" "$CONF_DIR/config.json"
-  else
-    sed -i "s/\"{no_delay}\"/true/g" "$CONF_DIR/config.json"
-  fi
-  if [ "${fast_open}" = "0" ]; then
-    sed -i "s/\"{fast_open}\"/false/g" "$CONF_DIR/config.json"
-  else
-    sed -i "s/\"{fast_open}\"/true/g" "$CONF_DIR/config.json"
-  fi
-  if [ "${mptcp}" = "0" ]; then
-    sed -i "s/\"{mptcp}\"/false/g" "$CONF_DIR/config.json"
-  else
-    sed -i "s/\"{mptcp}\"/true/g" "$CONF_DIR/config.json"
-  fi
 }
 
 # parse_config_extra is kept for compatibility but holds no options itself.
@@ -139,15 +89,14 @@ parse_config_node() {
   local plugin
   local plugin_opts
   local enabled
-  local entry
 
-  config_get server $section_name server
-  config_get server_port $section_name server_port
-  config_get password $section_name password
-  config_get method $section_name method
-  config_get plugin $section_name plugin
-  config_get plugin_opts $section_name plugin_opts
-  config_get enabled $section_name enabled
+  config_get server "$section_name" server
+  config_get server_port "$section_name" server_port
+  config_get password "$section_name" password
+  config_get method "$section_name" method
+  config_get plugin "$section_name" plugin
+  config_get plugin_opts "$section_name" plugin_opts
+  config_get enabled "$section_name" enabled
 
   # Only the simple-obfs client is supported for now.
   if [ -n "${plugin}" ] && [ "${plugin}" != "obfs-local" ]; then
@@ -183,29 +132,23 @@ parse_config_node() {
       fi
     fi
 
-    entry="    {
-      \"server\": \"$(json_escape "${server}")\",
-      \"server_port\": ${server_port},
-      \"password\": \"$(json_escape "${password}")\",
-      \"method\": \"$(json_escape "${method}")\""
-
+    # Append this server to the JSON servers array via jshn.  The array must
+    # already be open (see generate_config_json); jshn handles JSON escaping
+    # of strings automatically, so no manual json_escape is needed here.
+    json_add_object ""
+    json_add_string "server" "$server"
+    json_add_int "server_port" "$server_port"
+    json_add_string "password" "$password"
+    json_add_string "method" "$method"
     if [ -n "${plugin}" ]; then
-      entry="${entry},
-      \"plugin\": \"$(json_escape "${plugin}")\""
+      json_add_string "plugin" "$plugin"
       if [ -n "${plugin_opts}" ]; then
-        entry="${entry},
-      \"plugin_opts\": \"$(json_escape "${plugin_opts}")\""
+        json_add_string "plugin_opts" "$plugin_opts"
       fi
     fi
+    json_close_object
 
-    entry="${entry}
-    }"
-
-    if [ -n "${SERVER_LIST_STR}" ]; then
-      SERVER_LIST_STR="${SERVER_LIST_STR},
-"
-    fi
-    SERVER_LIST_STR="${SERVER_LIST_STR}${entry}"
+    SERVER_LIST_STR="1"
   fi
 }
 
@@ -216,32 +159,145 @@ generate_config_json() {
   SERVER_LIST_V4=""
   SERVER_LIST_V6=""
 
-  cp "$CONF_DIR/config-template.json" "$CONF_DIR/config.json"
+  # Build the config object with OpenWrt's built-in jshn library instead of
+  # sed-replacing a static template.  jshn takes care of JSON string escaping
+  # automatically (passwords, addresses, plugin opts, ...), so no template
+  # file and no awk/sed splicing are needed anymore.
 
   parse_config_main main
   parse_config_global global
 
-  config_foreach parse_config_node node
+  # Sensible defaults when a UCI option is left unset.
+  : "${MAIN_REDIR_PORT:=60080}"
+  : "${MAIN_DNS_PORT:=5300}"
+  : "${MAIN_SOCKS_PORT:=1080}"
+  : "${MAIN_HTTP_PORT:=1081}"
+  : "${MAIN_DNS_REMOTE_ADDR:=8.8.8.8}"
+  : "${keep_alive:=30}"
+  : "${nofile:=32768}"
+  : "${client_cache_size:=0}"
+  : "${worker_count:=1}"
+  : "${no_delay:=1}"
+  : "${fast_open:=1}"
+  : "${mptcp:=1}"
 
-  # Splice the servers block in with awk: the plugin options contain
-  # characters that are special to a sed replacement (';', '&', '|', '/'),
-  # and passwords may contain them too.
-  if [ -n "${SERVER_LIST_STR}" ]; then
-    printf '%s\n' "${SERVER_LIST_STR}" > "$SERVERS_TMP"
+  json_init
+
+  # ---- locals array ----
+  json_add_array "locals"
+
+  # socks5 local
+  json_add_object ""
+    if [ "${MAIN_SOCKS_PORT}" = "0" ]; then
+      json_add_boolean "disabled" true
+      json_add_int "local_port" 1080
+    else
+      json_add_boolean "disabled" false
+      json_add_int "local_port" "${MAIN_SOCKS_PORT}"
+    fi
+    json_add_string "local_address" "::"
+  json_close_object
+
+  # http local
+  json_add_object ""
+    if [ "${MAIN_HTTP_PORT}" = "0" ]; then
+      json_add_boolean "disabled" true
+      json_add_int "local_port" 1081
+    else
+      json_add_boolean "disabled" false
+      json_add_int "local_port" "${MAIN_HTTP_PORT}"
+    fi
+    json_add_string "local_address" "::"
+    json_add_string "protocol" "http"
+  json_close_object
+
+  # redir local (tproxy)
+  json_add_object ""
+    json_add_string "local_address" "::"
+    json_add_int "local_port" "${MAIN_REDIR_PORT}"
+    json_add_string "protocol" "redir"
+    json_add_string "tcp_redir" "tproxy"
+    json_add_string "udp_redir" "tproxy"
+    json_add_string "mode" "tcp_and_udp"
+    json_add_string "acl" "/etc/shadowproxy/shadowproxy-redir.acl"
+  json_close_object
+
+  # dns local
+  json_add_object ""
+    json_add_string "local_address" "::"
+    json_add_int "local_port" "${MAIN_DNS_PORT}"
+    json_add_string "protocol" "dns"
+    json_add_string "local_dns_address" "${MAIN_DNS_REMOTE_ADDR}"
+    json_add_int "local_dns_port" 53
+    json_add_string "remote_dns_address" "${MAIN_DNS_REMOTE_ADDR}"
+    json_add_int "remote_dns_port" 53
+    json_add_int "client_cache_size" "${client_cache_size}"
+    json_add_string "mode" "udp_only"
+  json_close_object
+
+  json_close_array
+
+  # ---- servers array ----
+  json_add_array "servers"
+    config_foreach parse_config_node node
+  json_close_array
+
+  # ---- top-level fields ----
+  json_add_int "timeout" 15
+  json_add_int "keep_alive" "${keep_alive}"
+  json_add_int "nofile" "${nofile}"
+  json_add_boolean "ipv6_first" false
+  json_add_boolean "ipv6_only" false
+  json_add_int "outbound_fwmark" 255
+  if [ "${no_delay}" = "0" ]; then
+    json_add_boolean "no_delay" false
   else
-    : > "$SERVERS_TMP"
+    json_add_boolean "no_delay" true
   fi
-  awk -v servers="$SERVERS_TMP" '
-    index($0, "\"{servers_list}\"") {
-      while ((getline line < servers) > 0)
-        print line
-      close(servers)
-      next
-    }
-    { print }
-  ' "$CONF_DIR/config.json" > "$CONF_DIR/config.json.new" &&
-    mv "$CONF_DIR/config.json.new" "$CONF_DIR/config.json"
-  rm -f "$SERVERS_TMP"
+  if [ "${fast_open}" = "0" ]; then
+    json_add_boolean "fast_open" false
+  else
+    json_add_boolean "fast_open" true
+  fi
+  if [ "${mptcp}" = "0" ]; then
+    json_add_boolean "mptcp" false
+  else
+    json_add_boolean "mptcp" true
+  fi
+  json_add_int "udp_timeout" 300
+  json_add_int "udp_max_associations" 1024
+
+  # balancer
+  json_add_object "balancer"
+    json_add_int "max_server_rtt" 15
+    json_add_int "check_interval" 360
+    json_add_int "check_best_interval" 120
+  json_close_object
+
+  # security
+  json_add_object "security"
+    json_add_object "replay_attack"
+      json_add_string "policy" "reject"
+    json_close_object
+  json_close_object
+
+  # log
+  json_add_object "log"
+    json_add_string "config_path" "/var/shadowproxy/log4rs.yml"
+  json_close_object
+
+  # runtime
+  json_add_object "runtime"
+    json_add_string "mode" "multi_thread"
+    json_add_int "worker_count" "${worker_count}"
+  json_close_object
+
+  # 把运行时生成的 config.json 和 log4rs.yml 放到 /var（tmpfs），避免频繁写 flash。
+  mkdir -p /var/shadowproxy
+  if [ -f "$CONF_DIR/log4rs.yml" ]; then
+    cp "$CONF_DIR/log4rs.yml" "/var/shadowproxy/log4rs.yml"
+  fi
+  json_dump_to_file "/var/shadowproxy/config.json"
 }
 
 config_sysctl() {
@@ -364,9 +420,9 @@ remove_dnsmasq_rules() {
 
 start_shadowproxy() {
   procd_open_instance shadowproxy
-  procd_set_param command /usr/bin/sslocal -c /etc/shadowproxy/config.json
+  procd_set_param command /usr/bin/sslocal -c /var/shadowproxy/config.json
   procd_set_param pidfile /var/run/shadowproxy.pid
-  procd_set_param file /etc/shadowproxy/config.json
+  procd_set_param file /var/shadowproxy/config.json
   procd_set_param respawn ${respawn_threshold:-3600} ${respawn_timeout:-5} ${respawn_retry:-2}
   procd_set_param limits core="unlimited"
   procd_set_param stdout 1

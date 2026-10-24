@@ -168,8 +168,7 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 
 | 文件 | 说明 |
 |------|------|
-| `config-template.json` | shadowsocks-rust 配置模板 |
-| `config.json` | 运行时生成的配置文件 |
+| `config.json` | 运行时生成的配置文件（放在 /var/shadowproxy，避免写 flash） |
 | `shadowproxy-redir.acl` | 透明代理 ACL 规则 |
 | `bypass_ipset.acl` | 绕过代理的 IP 列表 |
 | `shadowproxy.nft` | nftables 规则 |
