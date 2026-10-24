@@ -15,7 +15,7 @@
     "order": 10,
     "action": {
       "type": "view",
-      "path": "shadowproxy"
+      "path": "settings"
     },
     "depends": {
       "acl": [ "luci-app-shadowproxy" ]
@@ -26,7 +26,7 @@
     "order": 20,
     "action": {
       "type": "view",
-      "path": "shadowproxy-nodes"
+      "path": "nodes"
     },
     "depends": {
       "acl": [ "luci-app-shadowproxy" ]
@@ -37,7 +37,7 @@
     "order": 30,
     "action": {
       "type": "view",
-      "path": "shadowproxy-rules"
+      "path": "rules"
     },
     "depends": {
       "acl": [ "luci-app-shadowproxy" ]
