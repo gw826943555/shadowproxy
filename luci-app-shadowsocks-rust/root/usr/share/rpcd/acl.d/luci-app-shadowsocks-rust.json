@@ -1,6 +1,6 @@
 {
-  "luci-app-shadowproxy": {
-    "description": "Grant access to shadowproxy",
+  "luci-app-shadowsocks-rust": {
+    "description": "Grant access to shadowsocks-rust TProxy",
     "read": {
       "ubus": {
         "uci": [ "get" ],

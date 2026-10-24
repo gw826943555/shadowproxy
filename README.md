@@ -56,11 +56,11 @@ scp bin/<架构>/sslocal root@router:/usr/bin/sslocal
 ssh root@router "chmod +x /usr/bin/sslocal"
 
 # 2. 复制 LuCI 界面文件
-scp -r luci-app-shadowproxy/htdocs/* root@router:/www/
-scp -r luci-app-shadowproxy/root/* root@router:/
+scp -r luci-app-shadowsocks-rust/htdocs/* root@router:/www/
+scp -r luci-app-shadowsocks-rust/root/* root@router:/
 
 # 3. 复制后端配置和脚本文件
-scp -r shadowproxy/files/* root@router:/
+scp -r shadowsocks-rust/files/* root@router:/
 
 # 4. 启用服务
 ssh root@router "/etc/init.d/shadowproxy enable"
@@ -72,14 +72,14 @@ ssh root@router "/etc/init.d/shadowproxy enable"
 
 | 目录 | 软件包 | 说明 |
 |------|--------|------|
-| `luci-app-shadowproxy/` | `luci-app-shadowproxy` | LuCI 界面（`luci.mk`） |
-| `shadowproxy/` | `shadowproxy` | 后端服务、UCI 配置、ucode 防火墙模板 |
+| `luci-app-shadowsocks-rust/` | `luci-app-shadowsocks-rust` | LuCI 界面（`luci.mk`） |
+| `shadowsocks-rust/` | `shadowsocks-rust` | TProxy 服务（UCI 配置、ucode 防火墙模板）；同时编译 shadowsocks-rust 的 sslocal 等子包（`shadowsocks-rust-sslocal` 等） |
 
 把这两个目录放入 feed 或 `package/` 下，然后：
 
 ```bash
-make package/shadowproxy/compile V=s
-make package/luci-app-shadowproxy/compile V=s
+make package/shadowsocks-rust/compile V=s
+make package/luci-app-shadowsocks-rust/compile V=s
 ```
 
 ### 依赖安装

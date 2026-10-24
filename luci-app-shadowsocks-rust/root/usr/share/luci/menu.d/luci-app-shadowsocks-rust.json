@@ -1,16 +1,16 @@
 {
-  "admin/services/shadowproxy": {
-    "title": "ShadowProxy",
+  "admin/services/shadowsocks-rust": {
+    "title": "Shadowsocks-Rust",
     "order": 80,
     "action": {
       "type": "alias",
-      "path": "admin/services/shadowproxy/basic"
+      "path": "admin/services/shadowsocks-rust/basic"
     },
     "depends": {
-      "acl": [ "luci-app-shadowproxy" ]
+      "acl": [ "luci-app-shadowsocks-rust" ]
     }
   },
-  "admin/services/shadowproxy/basic": {
+  "admin/services/shadowsocks-rust/basic": {
     "title": "Basic Settings",
     "order": 10,
     "action": {
@@ -18,10 +18,10 @@
       "path": "settings"
     },
     "depends": {
-      "acl": [ "luci-app-shadowproxy" ]
+      "acl": [ "luci-app-shadowsocks-rust" ]
     }
   },
-  "admin/services/shadowproxy/nodes": {
+  "admin/services/shadowsocks-rust/nodes": {
     "title": "Nodes",
     "order": 20,
     "action": {
@@ -29,10 +29,10 @@
       "path": "nodes"
     },
     "depends": {
-      "acl": [ "luci-app-shadowproxy" ]
+      "acl": [ "luci-app-shadowsocks-rust" ]
     }
   },
-  "admin/services/shadowproxy/rules": {
+  "admin/services/shadowsocks-rust/rules": {
     "title": "Rules",
     "order": 30,
     "action": {
@@ -40,7 +40,7 @@
       "path": "rules"
     },
     "depends": {
-      "acl": [ "luci-app-shadowproxy" ]
+      "acl": [ "luci-app-shadowsocks-rust" ]
     }
   }
 }
