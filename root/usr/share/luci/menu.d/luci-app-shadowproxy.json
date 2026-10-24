@@ -3,8 +3,41 @@
     "title": "ShadowProxy",
     "order": 80,
     "action": {
+      "type": "alias",
+      "path": "admin/services/shadowproxy/basic"
+    },
+    "depends": {
+      "acl": [ "luci-app-shadowproxy" ]
+    }
+  },
+  "admin/services/shadowproxy/basic": {
+    "title": "Basic Settings",
+    "order": 10,
+    "action": {
       "type": "view",
       "path": "shadowproxy"
+    },
+    "depends": {
+      "acl": [ "luci-app-shadowproxy" ]
+    }
+  },
+  "admin/services/shadowproxy/nodes": {
+    "title": "Nodes",
+    "order": 20,
+    "action": {
+      "type": "view",
+      "path": "shadowproxy-nodes"
+    },
+    "depends": {
+      "acl": [ "luci-app-shadowproxy" ]
+    }
+  },
+  "admin/services/shadowproxy/rules": {
+    "title": "Rules",
+    "order": 30,
+    "action": {
+      "type": "view",
+      "path": "shadowproxy-rules"
     },
     "depends": {
       "acl": [ "luci-app-shadowproxy" ]
