@@ -19,6 +19,12 @@ config settings global
     option mptcp '0'
 
 config rules 'settings'
+    # accept: direct, checkdst: match the lists below, forward: always proxy
+    option src_default 'accept'
+    # accept: direct, forward: proxy
+    option dst_default 'accept'
+    # none: direct, checkdst: match the lists below, forward: always proxy
+    option local_default 'none'
     list proxy_ipset '8.8.8.8'
     list proxy_ipset '1.1.1.1'
     list proxy_domain 'google.com'

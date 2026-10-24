@@ -13,6 +13,7 @@ USE_PROCD=1
 
 # OpenWrt 内置的 jshn 库，用于在 generate_config_json() 中动态构建 JSON。
 . /lib/functions.sh
+. /usr/share/libubox/jshn.sh
 
 NAME=shadowproxy
 
@@ -21,10 +22,9 @@ SERVERS_TMP=/tmp/$NAME-servers.$$
 DNSMASQ_CONF=/etc/dnsmasq.conf
 DNSMASQ_CONF_BEGIN="# BEGIN shadowproxy"
 DNSMASQ_CONF_END="# END shadowproxy"
-TPROXY_PORT=60080
+RULES_DIR=/usr/share/$NAME/ss-rules
+NFT_RULES=/var/$NAME/shadowproxy.nft
 DNS_PORT=5300
-SERVER_LIST_V4=""
-SERVER_LIST_V6=""
 ENABLED="$(uci -q get shadowproxy.main.enabled)"
 
 uci_load "$NAME"
@@ -44,10 +44,6 @@ parse_config_main() {
   config_get dns_remote_addr "$section_name" dns_remote_addr
   config_get socks_port "$section_name" socks_port
   config_get http_port "$section_name" http_port
-
-  if [ "$redir_port" != "$TPROXY_PORT" ]; then
-    TPROXY_PORT=$redir_port
-  fi
 
   if [ "$dns_port" != "$DNS_PORT" ]; then
     DNS_PORT=$dns_port
@@ -118,14 +114,6 @@ parse_config_node() {
       return
     fi
 
-    if [ "${server}" = "$(echo $server | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ]; then
-      SERVER_LIST_V4="$SERVER_LIST_V4 ${server},"
-    elif [ "${server}" = "$(echo $server | grep -E '^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{1,4}$' )" ]; then
-      SERVER_LIST_V6="$SERVER_LIST_V6 ${server},"
-    else
-      echo "Unrecognized IP format $server"
-    fi
-
     if [ -n "${plugin}" ]; then
       if ! command -v "${plugin}" >/dev/null 2>&1; then
         _error "plugin ${plugin} is not installed, node ${server} will not work"
@@ -154,10 +142,8 @@ parse_config_node() {
 
 generate_config_json() {
   # start_service may run more than once in the same process (reload_service
-  # calls stop and then start), so rebuild the lists from scratch.
+  # calls stop and then start), so rebuild the list from scratch.
   SERVER_LIST_STR=""
-  SERVER_LIST_V4=""
-  SERVER_LIST_V6=""
 
   # Build the config object with OpenWrt's built-in jshn library instead of
   # sed-replacing a static template.  jshn takes care of JSON string escaping
@@ -297,7 +283,7 @@ generate_config_json() {
   if [ -f "$CONF_DIR/log4rs.yml" ]; then
     cp "$CONF_DIR/log4rs.yml" "/var/shadowproxy/log4rs.yml"
   fi
-  json_dump_to_file "/var/shadowproxy/config.json"
+  json_dump > "/var/shadowproxy/config.json"
 }
 
 config_sysctl() {
@@ -307,99 +293,93 @@ config_sysctl() {
 }
 
 config_route() {
-  ip -4 rule del fwmark 0x1 table 803 || true
-  ip -4 rule add fwmark 0x1 table 803
-  ip -4 route del local 0.0.0.0/0 dev lo table 803 || true
-  ip -4 route add local 0.0.0.0/0 dev lo table 803
-
-  ip -6 rule del fwmark 0x1 table 803 || true
-  ip -6 rule add fwmark 0x1 table 803
-  ip -6 route del local ::/0 dev lo table 803 || true
-  ip -6 route add local ::/0 dev lo table 803
+  # Packets marked 100 by the ss-rules templates are routed to lo so that
+  # they reach the tproxy rule in prerouting.
+  for family in -4 -6; do
+    while ip $family rule del fwmark 100 lookup 100 2>/dev/null; do true; done
+    ip $family rule add fwmark 100 lookup 100
+    ip $family route flush table 100 2>/dev/null || true
+    ip $family route add local default dev lo table 100
+  done
 }
 
 update_nftables() {
   if [ -n "$(nft list tables | grep shadowproxy-mangle)" ]; then
     nft delete table inet shadowproxy-mangle
   fi
-  nft -f /etc/shadowproxy/shadowproxy.nft -Dtproxy_port=${TPROXY_PORT}
-  # read the bypass list from UCI 'config rules bypass_ipset'
-  local bypass_ipsets
-  config_get bypass_ipsets "settings" bypass_ipset
-  for item in $bypass_ipsets; do
-    if [ "${item}" = "$(echo $item | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')" ]; then
-      SERVER_LIST_V4="$SERVER_LIST_V4 ${item},"
-    elif [ "${item}" = "$(echo $item | grep -E '^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{1,4}$')" ]; then
-      SERVER_LIST_V6="$SERVER_LIST_V6 ${item},"
-    else
-      echo "Unrecognized IP format $item"
-    fi
-  done
 
-  if [ -n "${SERVER_LIST_V4}" ]; then
-    nft add element inet shadowproxy-mangle whitelist_v4_set \{ "${SERVER_LIST_V4}" \}
+  # The ruleset is rendered from the ucode templates in $RULES_DIR. They read
+  # the source/destination lists from UCI and the remote servers from config.json.
+  if ! ucode -T "$RULES_DIR/rules.uc" > "$NFT_RULES"; then
+    _error "failed to render nftables ruleset from $RULES_DIR"
+    return 1
   fi
-  if [ -n "${SERVER_LIST_V6}" ]; then
-    nft add element inet shadowproxy-mangle whitelist_v6_set \{ "${SERVER_LIST_V6}" \}
+  if ! nft -f "$NFT_RULES"; then
+    _error "failed to load nftables ruleset $NFT_RULES"
+    return 1
   fi
+}
 
-  # Add user-configured IPs/CIDRs that should always be proxied
-  local proxy_ipsets
-  config_get proxy_ipsets "settings" proxy_ipset
-  for ip in $proxy_ipsets; do
-    case "$ip" in
-      *:*)
-        nft add element inet shadowproxy-mangle proxy_set6 \{ "$ip" \} 2>/dev/null || true
-        ;;
-      *)
-        nft add element inet shadowproxy-mangle proxy_set4 \{ "$ip" \} 2>/dev/null || true
-        ;;
+normalize_domain() {
+  printf '%s' "$1" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+
+valid_domain() {
+  printf '%s' "$1" | grep -qE '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$'
+}
+
+# Succeeds if $1 equals or is a subdomain of an entry in the list $2
+# (e.g. bypass example.com also covers sub.example.com).
+domain_in_list() {
+  local d="$1" l
+  for l in $2; do
+    l=$(normalize_domain "$l")
+    [ -z "$l" ] && continue
+    [ "$d" = "$l" ] && return 0
+    case ".$d" in
+      *".$l") return 0 ;;
     esac
   done
+  return 1
 }
 
 update_dnsmasq_rules() {
-  # Only the domains listed in the LuCI page are resolved by sslocal (through
-  # the tunnel) and get proxied. dnsmasq keeps resolving everything else with
-  # its own upstream and adds the addresses of the listed domains to the nft
-  # sets, so the firewall only redirects the traffic of those domains.
-  # Domains in bypass_domain are resolved directly, not through the tunnel.
+  # Domains in proxy_domain are resolved through sslocal and their addresses
+  # are added to the ss_rules_dst_forward sets. Domains in bypass_domain are
+  # resolved directly and their addresses go to the ss_rules_dst_bypass sets.
+  # A domain listed in both is treated as bypass.
   local domain
   local tmp
   local proxy_domains
   local bypass_domains
-  local skip
 
   tmp=/tmp/$NAME-dnsmasq.$$
   : > "$tmp"
 
   config_get proxy_domains "settings" proxy_domain
   config_get bypass_domains "settings" bypass_domain
+
+  for domain in $bypass_domains; do
+    domain=$(normalize_domain "$domain")
+    [ -z "$domain" ] && continue
+    if ! valid_domain "$domain"; then
+      _error "invalid bypass domain '${domain}', skipped"
+      continue
+    fi
+    echo "nftset=/${domain}/4#inet#shadowproxy-mangle#ss_rules_dst_bypass,6#inet#shadowproxy-mangle#ss_rules6_dst_bypass" >> "$tmp"
+  done
+
   for domain in $proxy_domains; do
-    domain=$(printf '%s' "$domain" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+    domain=$(normalize_domain "$domain")
     [ -z "$domain" ] && continue
     case "$domain" in \#*) continue ;; esac
-    # Skip domains in bypass_domain (resolved directly, not through tunnel)
-    skip=0
-    for bd in $bypass_domains; do
-      bd=$(printf '%s' "$bd" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-      [ -z "$bd" ] && continue
-      # Exact match or subdomain match (e.g. bypass example.com skips sub.example.com)
-      if [ "$domain" = "$bd" ]; then
-        skip=1
-        break
-      fi
-      case ".$domain" in
-        *".$bd") skip=1; break ;;
-      esac
-    done
-    [ "$skip" -eq 1 ] && continue
-    if ! printf '%s' "$domain" | grep -qE '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$'; then
+    domain_in_list "$domain" "$bypass_domains" && continue
+    if ! valid_domain "$domain"; then
       _error "invalid proxy domain '${domain}', skipped"
       continue
     fi
     echo "server=/${domain}/127.0.0.1#${DNS_PORT}" >> "$tmp"
-    echo "nftset=/${domain}/4#inet#shadowproxy-mangle#proxy_set4,6#inet#shadowproxy-mangle#proxy_set6" >> "$tmp"
+    echo "nftset=/${domain}/4#inet#shadowproxy-mangle#ss_rules_dst_forward,6#inet#shadowproxy-mangle#ss_rules6_dst_forward" >> "$tmp"
   done
 
   # Replace our own block in /etc/dnsmasq.conf, keep everything else intact
@@ -457,9 +437,14 @@ start_service() {
     return 1
   fi
 
+  if [ -z "$(command -v ucode)" ]; then
+    _error "ucode is not installed, cannot render the firewall rules"
+    return 1
+  fi
+
   config_sysctl
   config_route
-  update_nftables
+  update_nftables || return 1
   start_shadowproxy
   # sslocal has to be up before dnsmasq starts forwarding the listed domains
   update_dnsmasq_rules

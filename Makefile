@@ -23,7 +23,7 @@ define Package/$(PKG_NAME)
 	SUBMENU:=VPN
 	TITLE:=Shadowsocks-Rust TProxy
 	URL:=https://github.com/shadowsocks/shadowsocks-rust
-	DEPENDS:=+kmod-nft-tproxy +shadowsocks-rust-sslocal
+	DEPENDS:=+kmod-nft-tproxy +nftables +ucode +ucode-mod-fs +ucode-mod-uci +shadowsocks-rust-sslocal
 endef
 
 define Package/$(PKG_NAME)/description
