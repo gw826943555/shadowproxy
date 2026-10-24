@@ -2,3 +2,4 @@ dist/*
 
 .idea
 deploy.sh
+deploy.ps1
