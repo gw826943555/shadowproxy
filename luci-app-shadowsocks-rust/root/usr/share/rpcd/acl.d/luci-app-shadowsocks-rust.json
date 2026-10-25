@@ -4,20 +4,14 @@
     "read": {
       "ubus": {
         "uci": [ "get" ],
-        "service": [ "list" ]
-      },
-      "file": {
-        "/usr/bin/sslocal": [ "exec" ],
-        "/etc/shadowsocks-rust/*": ["read"]
+        "service": [ "list" ],
+        "log": [ "read" ]
       },
       "uci": ["shadowsocks-rust"]
     },
     "write": {
       "ubus": {
         "uci": [ "set", "commit" ]
-      },
-      "file": {
-        "/etc/shadowsocks-rust/*": ["write"]
       },
       "uci": ["shadowsocks-rust"]
     }

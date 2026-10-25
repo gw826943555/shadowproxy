@@ -148,6 +148,7 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 | nofile | 最大文件描述符 | 10240 |
 | fast_open | TCP Fast Open | 禁用 |
 | mptcp | 多路径 TCP | 禁用 |
+| log_level | sslocal 日志级别：`info` / `debug` / `trace`，输出到系统日志（`logread`） | info |
 
 > 💡 `worker_count` 设得比 CPU 核数大只会浪费内存和调度开销，不会提升吞吐。调优细节见 [性能调优](#性能调优)
 
@@ -157,6 +158,31 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 
 配置完成后点击「保存并应用」，服务将自动启动。
 
+### 查看日志
+
+LuCI 的 `服务` → `Shadowsocks-Rust` → `Log` 页面可以查看系统日志中与插件相关的输出。
+
+这个页面直接复用 LuCI 自带的日志组件（和 `状态` → `系统日志` 是同一个），因此有：
+
+- facility / severity 过滤，以及「取反」勾选
+- 关键字过滤（`including:`）
+- 最大行数设置（`Max rows`，默认 1000）
+- 跳到日志开头 / 结尾的按钮，以及自动刷新
+
+默认只保留 `sslocal` 和 `shadowsocks-rust` 两种标签的输出：
+
+- `sslocal`：sslocal 的运行日志，通过 procd 转发到系统日志（logd），不需要单独的日志文件
+- `shadowsocks-rust`：init 脚本的启停和错误信息
+
+命令行等价操作：
+
+```bash
+logread -e sslocal
+logread -e shadowsocks-rust
+```
+
+日志详细程度由 Advanced Settings 里的 `Log Level`（`info` / `debug` / `trace`）控制。
+
 ## 配置文件说明
 
 所有配置文件位于 `/etc/shadowsocks-rust/` 目录：
@@ -164,8 +190,6 @@ obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-ob
 | 文件 | 说明 |
 |------|------|
 | `/etc/config/shadowsocks-rust` | UCI 配置（LuCI 页面读写的就是这个文件） |
-| `/etc/shadowsocks-rust/shadowsocks-rust-redir.acl` | sslocal 透明代理的 ACL 规则 |
-| `/etc/shadowsocks-rust/log4rs.yml` | sslocal 日志配置，启动时复制到 `/var/shadowsocks-rust/` |
 | `/var/shadowsocks-rust/config.json` | 运行时生成的 sslocal 配置（在 /var 下，避免写 flash） |
 | `/var/shadowsocks-rust/shadowsocks-rust.nft` | 运行时渲染出的 nftables 规则 |
 | `/usr/share/shadowsocks-rust/ss-rules/` | nftables 规则模板（ucode：`rules.uc`、`set.uc`、`chain.uc`） |
@@ -327,7 +351,12 @@ rm -rf /tmp/luci-*
 
 ### OpenWrt 版本要求
 
-防火墙规则由 ucode 模板渲染，需要系统提供 `ucode` 相关包。CI 目前只针对 OpenWrt 22.03 构建，建议使用 22.03 及以上版本；21.x 上如果没有这些包，需要自行处理依赖。
+防火墙规则由 ucode 模板渲染，日志页面复用了 LuCI 的 `tools.views` 组件，因此需要：
+
+- 系统提供 `ucode` 相关包（22.03 及以上版本通常都有）
+- LuCI 版本较新（`tools.views` 在 23.05 及以后的版本中提供，更早的版本没有日志页）
+
+本项目直接使用 OpenWrt snapshot 源码编译，没有预编译产物。
 
 ```bash
 opkg update

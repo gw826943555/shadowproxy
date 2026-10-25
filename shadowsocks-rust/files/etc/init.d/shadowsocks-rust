@@ -17,8 +17,6 @@ USE_PROCD=1
 
 NAME=shadowsocks-rust
 
-CONF_DIR=/etc/$NAME
-SERVERS_TMP=/tmp/$NAME-servers.$$
 DNSMASQ_CONF=/etc/dnsmasq.conf
 DNSMASQ_CONF_BEGIN="# BEGIN shadowsocks-rust"
 DNSMASQ_CONF_END="# END shadowsocks-rust"
@@ -67,6 +65,7 @@ parse_config_global() {
   config_get nofile "$section_name" nofile
   config_get fast_open "$section_name" fast_open
   config_get mptcp "$section_name" mptcp
+  config_get log_level "$section_name" log_level
 }
 
 # parse_config_extra is kept for compatibility but holds no options itself.
@@ -166,6 +165,7 @@ generate_config_json() {
   : "${no_delay:=1}"
   : "${fast_open:=1}"
   : "${mptcp:=1}"
+  : "${log_level:=info}"
 
   json_init
 
@@ -205,7 +205,6 @@ generate_config_json() {
     json_add_string "tcp_redir" "tproxy"
     json_add_string "udp_redir" "tproxy"
     json_add_string "mode" "tcp_and_udp"
-    json_add_string "acl" "/etc/shadowsocks-rust/shadowsocks-rust-redir.acl"
   json_close_object
 
   # dns local
@@ -267,9 +266,14 @@ generate_config_json() {
     json_close_object
   json_close_object
 
-  # log
+  # log: sslocal takes the level as a number, 0 = info, 1 = debug, 2 = trace
+  case "${log_level}" in
+    debug) sslocal_log_level=1 ;;
+    trace) sslocal_log_level=2 ;;
+    *) sslocal_log_level=0 ;;
+  esac
   json_add_object "log"
-    json_add_string "config_path" "/var/shadowsocks-rust/log4rs.yml"
+    json_add_int "level" "${sslocal_log_level}"
   json_close_object
 
   # runtime
@@ -278,11 +282,8 @@ generate_config_json() {
     json_add_int "worker_count" "${worker_count}"
   json_close_object
 
-  # 把运行时生成的 config.json 和 log4rs.yml 放到 /var（tmpfs），避免频繁写 flash。
+  # 运行时生成的 config.json 放到 /var（tmpfs），避免频繁写 flash。
   mkdir -p /var/shadowsocks-rust
-  if [ -f "$CONF_DIR/log4rs.yml" ]; then
-    cp "$CONF_DIR/log4rs.yml" "/var/shadowsocks-rust/log4rs.yml"
-  fi
   json_dump > "/var/shadowsocks-rust/config.json"
 }
 

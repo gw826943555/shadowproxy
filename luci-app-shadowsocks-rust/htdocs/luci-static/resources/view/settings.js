@@ -111,6 +111,14 @@ return view.extend({
         o.datatype = 'range(512,20480)';
         o.rmempty = false;
 
+        o = s.option(form.ListValue, 'log_level', _('Log Level'),
+            _('Verbosity of sslocal logs, written to the system log'));
+        o.value('info', _('Info'));
+        o.value('debug', _('Debug'));
+        o.value('trace', _('Trace'));
+        o.default = 'info';
+        o.rmempty = false;
+
         return m.render();
     }
 });

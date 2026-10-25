@@ -17,6 +17,8 @@ config settings global
     option nofile '10240'
     option fast_open '0'
     option mptcp '0'
+    # sslocal log level: info, debug or trace
+    option log_level 'info'
 
 config rules 'settings'
     # accept: direct, checkdst: match the lists below, forward: always proxy
