@@ -28,13 +28,10 @@ config rules 'settings'
     # none: direct, checkdst: match the lists below, forward: always proxy
     option local_default 'none'
     list proxy_ipset '8.8.8.8'
-    list proxy_ipset '1.1.1.1'
     list proxy_domain 'google.com'
     list proxy_domain 'example.com'
-    list bypass_ipset '10.0.0.0/8'
-    list bypass_ipset '172.16.0.0/12'
-    list bypass_domain 'localhost'
-    list bypass_domain 'local'
+    list bypass_ipset '114.114.114.114'
+    list bypass_domain 'example.com'
 
 config node
     option enabled '1'
