@@ -4,11 +4,14 @@
 /*
  * dnsmasq rule handling for shadowsocks-rust.
  *
- *   render   regenerate the dnsmasq block from the local UCI lists and the
- *            cached remote lists (no network access, fast)
+ *   render   regenerate the rules file in the dnsmasq conf-dir from the
+ *            local UCI lists and the cached remote lists (no network access)
  *   refresh  download the remote lists, update the cache, regenerate the
- *            dnsmasq block and reload dnsmasq (meant to run in background)
- *   remove   drop the shadowsocks-rust block from dnsmasq.conf
+ *            rules file and reload dnsmasq (meant to run in background)
+ *   remove   drop the rules file from the dnsmasq conf-dir
+ *
+ * The rules live in the tmpfs conf-dir of dnsmasq, so the overlay
+ * filesystem is never written and a stale file disappears on reboot.
  *
  * The nftables ruleset is rendered separately from rules.uc.
  */
@@ -22,9 +25,7 @@ const PROXY_CACHE = CACHE_DIR + '/proxy-domains.cache';
 const BYPASS_CACHE = CACHE_DIR + '/bypass-domains.cache';
 const LOCK_DIR = '/var/lock';
 const LOCK = LOCK_DIR + '/' + NAME + '-refresh.lock';
-const DNSMASQ_CONF = '/etc/dnsmasq.conf';
-const DNSMASQ_BEGIN = '# BEGIN shadowsocks-rust';
-const DNSMASQ_END = '# END shadowsocks-rust';
+const RULES_FILE = 'shadowsocks-rust.conf';
 const NFT_TABLE = 'shadowsocks-rust-mangle';
 const DNS_PORT_DEFAULT = 5300;
 const LOCK_STALE = 900;
@@ -170,48 +171,72 @@ function load_domains(option, cache_file) {
 /* ------------------------------------------------------------------ */
 /* dnsmasq config                                                      */
 
-function write_block(content) {
-	let data = fs.readfile(DNSMASQ_CONF);
+/* Directory dnsmasq includes as --conf-dir, using the same logic as
+ * /etc/init.d/dnsmasq: the confdir option of the first dnsmasq instance or
+ * /tmp/dnsmasq.<section>.d when it is not set. Keeping the rules in tmpfs
+ * avoids rewriting the flash on every start. */
+function dnsmasq_confdir() {
+	let sec = ctx.get_first('dhcp', 'dnsmasq');
 
-	/* Never rewrite a file we could not read, a truncation would destroy the
-	 * user configuration. */
-	if (data == null) {
-		error(sprintf('cannot read %s, not touching it', DNSMASQ_CONF));
-		return;
+	if (!sec)
+		return '/tmp/dnsmasq.d';
+
+	let dir = ctx.get('dhcp', sec, 'confdir');
+
+	if (type(dir) == 'array')
+		dir = dir[0];
+
+	if (dir && substr(dir, 0, 1) == '/') {
+		let comma = index(dir, ',');
+
+		return comma >= 0 ? substr(dir, 0, comma) : dir;
 	}
 
-	let out = [];
-	let skip = false;
+	return sprintf('/tmp/dnsmasq.%s.d', sec);
+}
 
-	for (let line in split(data, '\n')) {
-		if (line == DNSMASQ_BEGIN) {
-			skip = true;
-			continue;
-		}
+function rules_path() {
+	return dnsmasq_confdir() + '/' + RULES_FILE;
+}
 
-		if (line == DNSMASQ_END) {
-			skip = false;
-			continue;
-		}
+/* Write the generated rules into the dnsmasq conf-dir. Returns true when
+ * something changed, so that callers only reload dnsmasq when needed. */
+function write_rules(content) {
+	let path = rules_path();
+	let old = fs.readfile(path);
+	let text = content ? content + '\n' : '';
 
-		if (!skip)
-			push(out, line);
+	/* No rules at all: drop the file instead of leaving an empty one. */
+	if (!trim(text)) {
+		if (old == null)
+			return false;
+
+		fs.unlink(path);
+		return true;
 	}
 
-	while (length(out) && trim(out[length(out) - 1]) == '')
-		pop(out);
+	if (text == old)
+		return false;
 
-	if (content) {
-		push(out, DNSMASQ_BEGIN);
+	fs.mkdir(dnsmasq_confdir());
 
-		for (let line in split(content, '\n'))
-			push(out, line);
+	/* Write a temporary file and rename it, an interrupted write must not
+	 * leave a half written rules file behind. */
+	let tmp = sprintf('%s.%d.tmp', path, clock()[1]);
 
-		push(out, DNSMASQ_END);
+	if (!fs.writefile(tmp, text)) {
+		error(sprintf('failed to write %s', tmp));
+		fs.unlink(tmp);
+		return false;
 	}
 
-	if (!fs.writefile(DNSMASQ_CONF, length(out) ? join('\n', out) + '\n' : ''))
-		error(sprintf('failed to write %s', DNSMASQ_CONF));
+	if (!fs.rename(tmp, path)) {
+		error(sprintf('failed to replace %s', path));
+		fs.unlink(tmp);
+		return false;
+	}
+
+	return true;
 }
 
 function render() {
@@ -236,9 +261,10 @@ function render() {
 			d, NFT_TABLE, NFT_TABLE));
 	}
 
-	write_block(join('\n', out));
 	info(sprintf('dnsmasq rules rendered: %d proxy, %d bypass',
 		length(final_proxy), length(bypass)));
+
+	return write_rules(join('\n', out));
 }
 
 /* ------------------------------------------------------------------ */
@@ -347,7 +373,8 @@ function lock_acquire() {
 let cmd = ARGV[0];
 
 if (cmd == 'render') {
-	render();
+	if (render())
+		reload_dnsmasq();
 }
 else if (cmd == 'refresh') {
 	if (!lock_acquire())
@@ -361,15 +388,16 @@ else if (cmd == 'refresh') {
 	ctx = uci.cursor();
 
 	if (nft_table_exists()) {
-		render();
+		let changed = render();
 
 		/* The service may have been stopped while rendering, the
-		 * nftables sets the block refers to are gone in that case. */
+		 * nftables sets the rules refer to are gone in that case. */
 		if (nft_table_exists()) {
-			reload_dnsmasq();
+			if (changed)
+				reload_dnsmasq();
 		}
 		else {
-			write_block('');
+			write_rules('');
 			info('service stopped during refresh, dnsmasq left untouched');
 		}
 	}
@@ -380,7 +408,8 @@ else if (cmd == 'refresh') {
 	fs.rmdir(LOCK);
 }
 else if (cmd == 'remove') {
-	write_block('');
+	if (write_rules(''))
+		reload_dnsmasq();
 }
 else {
 	warn('usage: dnsmasq.uc {render|refresh|remove}\n');

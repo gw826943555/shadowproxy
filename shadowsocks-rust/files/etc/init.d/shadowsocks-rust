@@ -327,12 +327,10 @@ start_shadowsocks_rust() {
   procd_close_instance
 }
 
-# The dnsmasq configuration itself is not touched, only our own block in
-# /etc/dnsmasq.conf is (re)written, so the upstream servers and the noresolv
-# setting of the user are left alone.
-reload_dnsmasq() {
-  /etc/init.d/dnsmasq reload
-}
+# The dnsmasq configuration itself is not touched: ss-rules/dnsmasq.uc writes
+# a rules file into the dnsmasq conf-dir (tmpfs), so the upstream servers, the
+# noresolv setting of the user and the flash are left alone. The helper
+# reloads dnsmasq itself and only when the rules actually changed.
 
 start_service() {
   _info "start shadowsocks-rust service."
@@ -382,7 +380,7 @@ start_service() {
   #    lists, then refresh the remote lists in the background. A slow or
   #    unreachable download server therefore never blocks the service start.
   if [ -f "$DOMAINS_RULES" ]; then
-    ucode "$DOMAINS_RULES" render && reload_dnsmasq
+    ucode "$DOMAINS_RULES" render || _error "failed to render the dnsmasq rules"
     (
       ucode "$DOMAINS_RULES" refresh
     ) </dev/null >/dev/null 2>&1 &
@@ -401,9 +399,8 @@ stop_service() {
   fi
 
   if [ -f "$DOMAINS_RULES" ]; then
-    ucode "$DOMAINS_RULES" remove
+    ucode "$DOMAINS_RULES" remove || _error "failed to remove the dnsmasq rules"
   fi
-  reload_dnsmasq
 
   # Clean up routing rules added by config_route()
   for family in -4 -6; do
