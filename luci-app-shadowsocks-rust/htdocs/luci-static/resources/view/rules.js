@@ -72,8 +72,20 @@ return view.extend({
         o.rmempty = true;
         o.optional = true;
 
+        o = s.taboption('proxy_domain', form.DynamicList, 'proxy_domain_url', _('Proxy Domain URL'),
+            _('URLs of text files with one domain per line. They are downloaded on every start and added to the list above.'));
+        o.placeholder = 'https://example.com/proxy-domains.txt';
+        o.rmempty = true;
+        o.optional = true;
+
         o = s.taboption('bypass_domain', form.DynamicList, 'bypass_domain', _('Bypass Domain'),
             _('Domains and subdomains resolved directly, not through the tunnel.'));
+        o.rmempty = true;
+        o.optional = true;
+
+        o = s.taboption('bypass_domain', form.DynamicList, 'bypass_domain_url', _('Bypass Domain URL'),
+            _('URLs of text files with one domain per line. They are downloaded on every start and added to the list above.'));
+        o.placeholder = 'https://example.com/bypass-domains.txt';
         o.rmempty = true;
         o.optional = true;
 

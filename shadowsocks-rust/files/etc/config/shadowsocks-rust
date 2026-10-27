@@ -32,8 +32,11 @@ config rules 'settings'
     option local_default 'none'
     list proxy_ipset '8.8.8.8'
     list proxy_domain 'google.com'
+    # URLs of text files with one domain per line, downloaded on every start.
+    #list proxy_domain_url 'https://example.com/proxy-domains.txt'
     list bypass_ipset '114.114.114.114'
     list bypass_domain 'example.com'
+    #list bypass_domain_url 'https://example.com/bypass-domains.txt'
 
 config node
     option enabled '1'

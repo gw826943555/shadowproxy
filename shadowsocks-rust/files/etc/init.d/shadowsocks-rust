@@ -17,10 +17,8 @@ USE_PROCD=1
 
 NAME=shadowsocks-rust
 
-DNSMASQ_CONF=/etc/dnsmasq.conf
-DNSMASQ_CONF_BEGIN="# BEGIN shadowsocks-rust"
-DNSMASQ_CONF_END="# END shadowsocks-rust"
 RULES_DIR=/usr/share/$NAME/ss-rules
+DOMAINS_RULES="$RULES_DIR/dnsmasq.uc"
 NFT_RULES=/var/$NAME/shadowsocks-rust.nft
 DNS_PORT=5300
 ENABLED="$(uci -q get shadowsocks-rust.main.enabled)"
@@ -315,83 +313,6 @@ update_nftables() {
   fi
 }
 
-normalize_domain() {
-  printf '%s' "$1" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
-}
-
-valid_domain() {
-  printf '%s' "$1" | grep -qE '^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$'
-}
-
-# Succeeds if $1 equals or is a subdomain of an entry in the list $2
-# (e.g. bypass example.com also covers sub.example.com).
-domain_in_list() {
-  local d="$1" l
-  for l in $2; do
-    l=$(normalize_domain "$l")
-    [ -z "$l" ] && continue
-    [ "$d" = "$l" ] && return 0
-    case ".$d" in
-      *".$l") return 0 ;;
-    esac
-  done
-  return 1
-}
-
-update_dnsmasq_rules() {
-  # Domains in proxy_domain are resolved through sslocal and their addresses
-  # are added to the ss_rules_dst_forward sets. Domains in bypass_domain are
-  # resolved directly and their addresses go to the ss_rules_dst_bypass sets.
-  # A domain listed in both is treated as bypass.
-  local domain
-  local tmp
-  local proxy_domains
-  local bypass_domains
-
-  tmp=/tmp/$NAME-dnsmasq.$$
-  : > "$tmp"
-
-  config_get proxy_domains "settings" proxy_domain
-  config_get bypass_domains "settings" bypass_domain
-
-  for domain in $bypass_domains; do
-    domain=$(normalize_domain "$domain")
-    [ -z "$domain" ] && continue
-    if ! valid_domain "$domain"; then
-      _error "invalid bypass domain '${domain}', skipped"
-      continue
-    fi
-    echo "nftset=/${domain}/4#inet#shadowsocks-rust-mangle#ss_rules_dst_bypass,6#inet#shadowsocks-rust-mangle#ss_rules6_dst_bypass" >> "$tmp"
-  done
-
-  for domain in $proxy_domains; do
-    domain=$(normalize_domain "$domain")
-    [ -z "$domain" ] && continue
-    case "$domain" in \#*) continue ;; esac
-    domain_in_list "$domain" "$bypass_domains" && continue
-    if ! valid_domain "$domain"; then
-      _error "invalid proxy domain '${domain}', skipped"
-      continue
-    fi
-    echo "server=/${domain}/127.0.0.1#${DNS_PORT}" >> "$tmp"
-    echo "nftset=/${domain}/4#inet#shadowsocks-rust-mangle#ss_rules_dst_forward,6#inet#shadowsocks-rust-mangle#ss_rules6_dst_forward" >> "$tmp"
-  done
-
-  # Replace our own block in /etc/dnsmasq.conf, keep everything else intact
-  [ -f "$DNSMASQ_CONF" ] &&
-    sed -i "/^${DNSMASQ_CONF_BEGIN}\$/,/^${DNSMASQ_CONF_END}\$/d" "$DNSMASQ_CONF"
-  {
-    echo "$DNSMASQ_CONF_BEGIN"
-    cat "$tmp"
-    echo "$DNSMASQ_CONF_END"
-  } >> "$DNSMASQ_CONF"
-  rm -f "$tmp"
-}
-
-remove_dnsmasq_rules() {
-  [ -f "$DNSMASQ_CONF" ] || return 0
-  sed -i "/^${DNSMASQ_CONF_BEGIN}\$/,/^${DNSMASQ_CONF_END}\$/d" "$DNSMASQ_CONF"
-}
 
 start_shadowsocks_rust() {
   procd_open_instance shadowsocks-rust
@@ -457,20 +378,32 @@ start_service() {
     return 1
   fi
 
-  # 6. Point dnsmasq at sslocal only after sslocal and the firewall are up.
-  update_dnsmasq_rules
-  reload_dnsmasq
+  # 6. Render the dnsmasq block from the local lists and the cached remote
+  #    lists, then refresh the remote lists in the background. A slow or
+  #    unreachable download server therefore never blocks the service start.
+  if [ -f "$DOMAINS_RULES" ]; then
+    ucode "$DOMAINS_RULES" render && reload_dnsmasq
+    (
+      ucode "$DOMAINS_RULES" refresh
+    ) </dev/null >/dev/null 2>&1 &
+  else
+    _error "dnsmasq rule script $DOMAINS_RULES is missing"
+  fi
 }
 
 stop_service() {
   _info "stop shadowsocks-rust service."
 
-  remove_dnsmasq_rules
-  reload_dnsmasq
-
+  # Delete the nftables table first so that a background refresh finishing
+  # right now skips writing the dnsmasq block back.
   if [ -n "$(nft list tables | grep shadowsocks-rust-mangle)" ]; then
     nft delete table inet shadowsocks-rust-mangle
   fi
+
+  if [ -f "$DOMAINS_RULES" ]; then
+    ucode "$DOMAINS_RULES" remove
+  fi
+  reload_dnsmasq
 
   # Clean up routing rules added by config_route()
   for family in -4 -6; do
