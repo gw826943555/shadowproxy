@@ -51,12 +51,14 @@ ssh root@router "/etc/init.d/shadowsocks-rust enable"
 |------|--------|------|
 | `luci-app-shadowsocks-rust/` | `luci-app-shadowsocks-rust` | LuCI 界面（`luci.mk`） |
 | `shadowsocks-rust/` | `shadowsocks-rust` | TProxy 服务（UCI 配置、ucode 防火墙模板）；同时编译 shadowsocks-rust 的 sslocal 等子包（`shadowsocks-rust-sslocal` 等） |
+| `simple-obfs/` | `simple-obfs`、`simple-obfs-server` | SIP003 混淆插件，可选，只有使用 obfs 时才需要 |
 
-把这两个目录放入 feed 或 `package/` 下，然后：
+把这些目录放入 feed 或 `package/` 下，然后：
 
 ```bash
 make package/shadowsocks-rust/compile V=s
 make package/luci-app-shadowsocks-rust/compile V=s
+make package/simple-obfs/compile V=s          # 可选，使用 obfs 时
 ```
 
 ### 依赖安装
@@ -106,7 +108,7 @@ opkg install nftables kmod-nft-tproxy ucode ucode-mod-fs ucode-mod-uci
 
 obfs 不是加密方式，而是 SIP003 传输插件，目前仅支持 simple-obfs 的客户端 `obfs-local`。除了上面的加密参数外，还需要：
 
-1. 设备上安装插件程序，提供 `/usr/bin/obfs-local`
+1. 设备上安装插件程序，提供 `/usr/bin/obfs-local`。本仓库的 `simple-obfs/` 就是它的 OpenWrt 打包，`shadowsocks-rust` 服务包已经依赖它，安装服务包时会自动装上 `simple-obfs`（客户端）
 2. 服务器端同时运行 `obfs-server`，参数与客户端对应
 3. 在节点配置里把 Plugin 选为 `obfs-local`，并填写 Plugin Options
 

@@ -166,7 +166,7 @@ define Package/shadowsocks-rust
   SUBMENU:=Web Servers/Proxies
   TITLE:=TProxy service for shadowsocks-rust sslocal
   URL:=https://github.com/shadowsocks/shadowsocks-rust
-  DEPENDS:=+shadowsocks-rust-sslocal +kmod-nft-tproxy +nftables +ucode +ucode-mod-fs +ucode-mod-uci +uclient-fetch
+  DEPENDS:=+shadowsocks-rust-sslocal +kmod-nft-tproxy +nftables +ucode +ucode-mod-fs +ucode-mod-uci +uclient-fetch +simple-obfs
 endef
 
 define Package/shadowsocks-rust/description
