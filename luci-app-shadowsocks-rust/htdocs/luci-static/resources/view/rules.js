@@ -25,6 +25,10 @@ return view.extend({
         s.tab('bypass_ipset', _('Bypass Ipset'));
         s.tab('proxy_ipset', _('Proxy Ipset'));
 
+        o = s.taboption('policy', form.Flag, 'enabled', _('Apply Transparent Proxy Rules'),
+            _('Apply the route table, nftables and dnsmasq rules. When disabled, only the local SOCKS5/HTTP proxy is started.'));
+        o.rmempty = false;
+
         o = s.taboption('policy', form.ListValue, 'src_default', _('Default for Source IPs'),
             _('Used for clients not listed in the source tabs.'));
         o.value('accept', _('Direct'));

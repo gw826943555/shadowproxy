@@ -438,7 +438,17 @@ start_service() {
   #    tproxy port has a listener as soon as the rules take effect.
   start_shadowsocks_rust
 
-  # 4. Install the routing rule and the nftables ruleset. Roll everything
+  # 4. Transparent proxy rules (route table, nftables, dnsmasq) are optional.
+  #    When disabled, only the local SOCKS5/HTTP proxy is started and the
+  #    system network configuration is left untouched.
+  local enable_rules
+  config_get enable_rules "settings" enabled
+  if [ "${enable_rules}" != "1" ]; then
+    _info "transparent proxy rules disabled, local proxy only"
+    return 0
+  fi
+
+  # 5. Install the routing rule and the nftables ruleset. Roll everything
   #    back when the ruleset cannot be loaded.
   config_route
   if ! update_nftables; then
@@ -447,7 +457,7 @@ start_service() {
     return 1
   fi
 
-  # 5. Point dnsmasq at sslocal only after sslocal and the firewall are up.
+  # 6. Point dnsmasq at sslocal only after sslocal and the firewall are up.
   update_dnsmasq_rules
   reload_dnsmasq
 }

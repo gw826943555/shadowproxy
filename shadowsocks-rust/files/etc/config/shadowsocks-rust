@@ -21,6 +21,9 @@ config settings global
     option log_level 'info'
 
 config rules 'settings'
+    # Apply the transparent proxy rules (route table, nftables, dnsmasq).
+    # When disabled, sslocal only provides the local SOCKS5/HTTP proxy.
+    option enabled '0'
     # accept: direct, checkdst: match the lists below, forward: always proxy
     option src_default 'accept'
     # accept: direct, forward: proxy
