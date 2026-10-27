@@ -3,7 +3,7 @@
     "description": "Grant access to shadowsocks-rust TProxy",
     "read": {
       "ubus": {
-        "uci": [ "get" ],
+        "uci": [ "get", "changes" ],
         "service": [ "list" ],
         "log": [ "read" ]
       },
@@ -11,7 +11,7 @@
     },
     "write": {
       "ubus": {
-        "uci": [ "set", "commit" ]
+        "uci": [ "add", "set", "delete", "order", "commit", "apply", "confirm" ]
       },
       "uci": ["shadowsocks-rust"]
     }
