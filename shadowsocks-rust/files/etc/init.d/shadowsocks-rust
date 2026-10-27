@@ -415,16 +415,18 @@ reload_dnsmasq() {
 
 start_service() {
   _info "start shadowsocks-rust service."
-  if [ -z "$(command -v /usr/bin/sslocal)" ]; then
-    _error "/usr/bin/sslocal is not exist, please install it."
-    return 1
-  fi
 
-  generate_config_json
-
-  if [ "${ENABLED}" = "0" ]; then
+  # 1. Check whether the service is enabled first, so that a disabled
+  #    service does not touch the firewall or dnsmasq at all.
+  if [ "${ENABLED}" != "1" ]; then
     _info "service shadowsocks-rust not enabled"
     return 0
+  fi
+
+  # 2. Generate config.json and make sure the servers array is not empty.
+  if ! generate_config_json; then
+    _error "failed to generate config.json"
+    return 1
   fi
 
   if [ -z "${SERVER_LIST_STR}" ]; then
@@ -432,15 +434,20 @@ start_service() {
     return 1
   fi
 
-  if [ -z "$(command -v ucode)" ]; then
-    _error "ucode is not installed, cannot render the firewall rules"
+  # 3. Start sslocal before installing the firewall rules, so that the
+  #    tproxy port has a listener as soon as the rules take effect.
+  start_shadowsocks_rust
+
+  # 4. Install the routing rule and the nftables ruleset. Roll everything
+  #    back when the ruleset cannot be loaded.
+  config_route
+  if ! update_nftables; then
+    _error "failed to load nftables ruleset, rolling back"
+    stop
     return 1
   fi
 
-  config_route
-  update_nftables || return 1
-  start_shadowsocks_rust
-  # sslocal has to be up before dnsmasq starts forwarding the listed domains
+  # 5. Point dnsmasq at sslocal only after sslocal and the firewall are up.
   update_dnsmasq_rules
   reload_dnsmasq
 }

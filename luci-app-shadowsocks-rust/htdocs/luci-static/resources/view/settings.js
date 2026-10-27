@@ -27,27 +27,20 @@ return view.extend({
         s = m.section(form.NamedSection, 'main', 'conf', _('Service Settings'));
         s.anonymous = true;
 
-        o = s.option(form.Flag, 'running', _('Enabled'));
-        o.cfgvalue = function (section_id) {
+        // Runtime status (read-only)
+        o = s.option(form.DummyValue, '_running', _('Service Status'));
+        o.cfgvalue = function () {
             try {
-                return data[0]["instances"]["shadowsocks-rust"]["running"];
+                return data[0]["instances"]["shadowsocks-rust"]["running"]
+                    ? _('Running') : _('Stopped');
             } catch (e) {
-                return false;
+                return _('Stopped');
             }
         };
-        o.write = function (section_id, formvalue) {
-            var value = this.cfgvalue(section_id);
-            if (value == formvalue) {
-                return;
-            }
-            if (formvalue == false) {
-                uci.set("shadowsocks-rust", section_id, "enabled", "0");
-            } else {
-                uci.set("shadowsocks-rust", section_id, "enabled", "1");
-            }
 
-            return uci.set("shadowsocks-rust", section_id, "running", formvalue);
-        };
+        // Enabled: bound to the UCI 'enabled' option, so saving it always
+        // reflects the configured state and always produces a change.
+        o = s.option(form.Flag, 'enabled', _('Enabled'));
         o.rmempty = false;
 
         o = s.option(form.Value, 'socks_port', _('Socks Port'),
