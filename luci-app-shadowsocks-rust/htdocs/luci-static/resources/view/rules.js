@@ -20,13 +20,13 @@ return view.extend({
         s.tab('src_bypass', _('Source Bypass'));
         s.tab('src_forward', _('Source Forward'));
         s.tab('src_checkdst', _('Source Check Destination'));
-        s.tab('domain', _('Proxy Domain'));
+        s.tab('proxy_domain', _('Proxy Domain'));
         s.tab('bypass_domain', _('Bypass Domain'));
         s.tab('bypass_ipset', _('Bypass Ipset'));
         s.tab('proxy_ipset', _('Proxy Ipset'));
 
-        o = s.taboption('policy', form.Flag, 'enabled', _('Apply Transparent Proxy Rules'),
-            _('Apply the route table, nftables and dnsmasq rules. When disabled, only the local SOCKS5/HTTP proxy is started.'));
+        o = s.taboption('policy', form.Flag, 'enabled', _('Apply TProxy Rules'),
+            _('Apply the route table, nftables and dnsmasq rules. When disabled, TProxy rules are not applied.'));
         o.rmempty = false;
 
         o = s.taboption('policy', form.ListValue, 'src_default', _('Default for Source IPs'),
@@ -67,7 +67,7 @@ return view.extend({
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('domain', form.DynamicList, 'proxy_domain', _('Proxy Domain'),
+        o = s.taboption('proxy_domain', form.DynamicList, 'proxy_domain', _('Proxy Domain'),
             _('Domains and subdomains resolved through the tunnel.'));
         o.rmempty = true;
         o.optional = true;
