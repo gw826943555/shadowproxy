@@ -34,6 +34,9 @@ config rules 'settings'
     list proxy_domain 'google.com'
     # URLs of text files with one domain per line, downloaded on every start.
     #list proxy_domain_url 'https://example.com/proxy-domains.txt'
+    # Hours between two downloads of the remote lists, 0 downloads them
+    # only once when the service starts.
+    option refresh_hours '24'
     list bypass_ipset '114.114.114.114'
     list bypass_domain 'example.com'
     #list bypass_domain_url 'https://example.com/bypass-domains.txt'

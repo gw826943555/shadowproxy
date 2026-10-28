@@ -327,6 +327,35 @@ start_shadowsocks_rust() {
   procd_close_instance
 }
 
+# The domain list refresher runs as a second procd instance, so it is
+# stopped with the service and restarted by procd if it dies. The first
+# refresh happens right after start, then every refresh_hours hours.
+start_domain_refresh() {
+  local hours
+  local interval
+
+  config_get hours "settings" refresh_hours 24
+
+  case "$hours" in
+    ''|*[!0-9]*)
+      hours=24
+      ;;
+  esac
+
+  interval=$((hours * 3600))
+
+  procd_open_instance domain-refresh
+  procd_set_param command /usr/share/shadowsocks-rust/domain-refresh "$interval"
+  procd_set_param stdout 1
+  procd_set_param stderr 1
+  # With interval 0 the helper refreshes once and exits, respawning it would
+  # turn that into a busy loop.
+  if [ "$interval" -gt 0 ] 2>/dev/null; then
+    procd_set_param respawn 3600 5 5
+  fi
+  procd_close_instance
+}
+
 # The dnsmasq configuration itself is not touched: ss-rules/dnsmasq.uc writes
 # a rules file into the dnsmasq conf-dir (tmpfs), so the upstream servers, the
 # noresolv setting of the user and the flash are left alone. The helper
@@ -377,13 +406,12 @@ start_service() {
   fi
 
   # 6. Render the dnsmasq block from the local lists and the cached remote
-  #    lists, then refresh the remote lists in the background. A slow or
-  #    unreachable download server therefore never blocks the service start.
+  #    lists, then hand the download of the remote lists to a second procd
+  #    instance. A slow or unreachable server never blocks the start, and
+  #    procd stops the refresher together with the service.
   if [ -f "$DOMAINS_RULES" ]; then
     ucode "$DOMAINS_RULES" render || _error "failed to render the dnsmasq rules"
-    (
-      ucode "$DOMAINS_RULES" refresh
-    ) </dev/null >/dev/null 2>&1 &
+    start_domain_refresh
   else
     _error "dnsmasq rule script $DOMAINS_RULES is missing"
   fi

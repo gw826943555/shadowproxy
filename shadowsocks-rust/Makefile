@@ -186,6 +186,7 @@ define Package/shadowsocks-rust/install
 	$(INSTALL_DIR) $(1)/usr/share/shadowsocks-rust/ss-rules
 	$(INSTALL_CONF) ./files/etc/config/shadowsocks-rust $(1)/etc/config/shadowsocks-rust
 	$(INSTALL_BIN) ./files/etc/init.d/shadowsocks-rust $(1)/etc/init.d/shadowsocks-rust
+	$(INSTALL_BIN) ./files/usr/share/shadowsocks-rust/domain-refresh $(1)/usr/share/shadowsocks-rust/domain-refresh
 	$(INSTALL_DATA) ./files/usr/share/shadowsocks-rust/ss-rules/* $(1)/usr/share/shadowsocks-rust/ss-rules/
 endef
 

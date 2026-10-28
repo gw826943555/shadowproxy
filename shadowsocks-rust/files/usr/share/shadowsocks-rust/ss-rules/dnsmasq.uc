@@ -23,12 +23,9 @@ const NAME = 'shadowsocks-rust';
 const CACHE_DIR = '/var/shadowsocks-rust';
 const PROXY_CACHE = CACHE_DIR + '/proxy-domains.cache';
 const BYPASS_CACHE = CACHE_DIR + '/bypass-domains.cache';
-const LOCK_DIR = '/var/lock';
-const LOCK = LOCK_DIR + '/' + NAME + '-refresh.lock';
 const RULES_FILE = 'shadowsocks-rust.conf';
 const NFT_TABLE = 'shadowsocks-rust-mangle';
 const DNS_PORT_DEFAULT = 5300;
-const LOCK_STALE = 900;
 const DOMAIN_RE = /^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 const URL_RE = /^https?:\/\/[^[:space:]'"]+$/;
 
@@ -306,10 +303,19 @@ function refresh_one(option, cache_file) {
 		let list = normalize(data);
 
 		if (length(list)) {
-			if (fs.writefile(cache_file, join('\n', list) + '\n'))
+			let text = join('\n', list) + '\n';
+
+			/* Write through a temporary file: procd may stop the refresh
+			 * instance in the middle of a download, a half written cache
+			 * must never replace the last complete one. */
+			let tmp = sprintf('%s.%d.tmp', cache_file, clock()[1]);
+
+			if (fs.writefile(tmp, text) && fs.rename(tmp, cache_file))
 				info(sprintf('updated cache %s (%d domains)', cache_file, length(list)));
-			else
+			else {
+				fs.unlink(tmp);
 				error(sprintf('failed to write %s', cache_file));
+			}
 
 			return;
 		}
@@ -345,28 +351,6 @@ function reload_dnsmasq() {
 	p.close();
 }
 
-/* mkdir() returns null instead of throwing when the directory exists, an
- * atomic mkdir is the cheapest lock available on OpenWrt. A refresh killed
- * by the OOM handler leaves the directory behind, so drop it once it is
- * older than LOCK_STALE seconds and retry once. */
-function lock_acquire() {
-	fs.mkdir(LOCK_DIR);
-
-	if (fs.mkdir(LOCK) != null)
-		return true;
-
-	let st = fs.stat(LOCK);
-
-	if (!st || (time() - st.mtime) < LOCK_STALE)
-		return false;
-
-	info('removing stale refresh lock');
-
-	fs.rmdir(LOCK);
-
-	return fs.mkdir(LOCK) != null;
-}
-
 /* ------------------------------------------------------------------ */
 /* main                                                                */
 
@@ -377,9 +361,6 @@ if (cmd == 'render') {
 		reload_dnsmasq();
 }
 else if (cmd == 'refresh') {
-	if (!lock_acquire())
-		exit(0);
-
 	refresh_cache();
 
 	/* The download may have taken minutes, re-read the configuration so
@@ -404,8 +385,6 @@ else if (cmd == 'refresh') {
 	else {
 		info('service stopped during refresh, dnsmasq left untouched');
 	}
-
-	fs.rmdir(LOCK);
 }
 else if (cmd == 'remove') {
 	if (write_rules(''))

@@ -52,6 +52,13 @@ return view.extend({
         o.default = 'none';
         o.rmempty = false;
 
+        o = s.taboption('policy', form.Value, 'refresh_hours', _('Domains Refresh Interval'),
+            _('Hours between two downloads of the remote domain lists, 0 downloads them only once when the service starts.'));
+        o.datatype = 'range(0,8760)';
+        o.default = '24';
+        o.placeholder = '24';
+        o.rmempty = false;
+
         o = s.taboption('src_bypass', form.DynamicList, 'src_bypass', _('Source Bypass'),
             _('Client IP/CIDR always connecting directly.'));
         o.rmempty = true;
@@ -73,7 +80,7 @@ return view.extend({
         o.optional = true;
 
         o = s.taboption('proxy_domain', form.DynamicList, 'proxy_domain_url', _('Proxy Domain URL'),
-            _('URLs of text files with one domain per line. They are downloaded on every start and added to the list above.'));
+            _('URLs of text files with one domain per line. They are downloaded when the service starts and added to the list above.'));
         o.placeholder = 'https://example.com/proxy-domains.txt';
         o.rmempty = true;
         o.optional = true;
@@ -84,7 +91,7 @@ return view.extend({
         o.optional = true;
 
         o = s.taboption('bypass_domain', form.DynamicList, 'bypass_domain_url', _('Bypass Domain URL'),
-            _('URLs of text files with one domain per line. They are downloaded on every start and added to the list above.'));
+            _('URLs of text files with one domain per line. They are downloaded when the service starts and added to the list above.'));
         o.placeholder = 'https://example.com/bypass-domains.txt';
         o.rmempty = true;
         o.optional = true;
