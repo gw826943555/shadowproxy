@@ -362,7 +362,8 @@ start_domain_refresh() {
 # The dnsmasq configuration itself is not touched: ss-rules/dnsmasq.uc writes
 # a rules file into the dnsmasq conf-dir (tmpfs), so the upstream servers, the
 # noresolv setting of the user and the flash are left alone. The helper
-# reloads dnsmasq itself and only when the rules actually changed.
+# restarts dnsmasq itself (SIGHUP would not re-read the conf-dir) and only when
+# the rules actually changed.
 
 start_service() {
   _info "start shadowsocks-rust service."

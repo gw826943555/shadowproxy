@@ -558,8 +558,11 @@ function nft_table_exists() {
 	return index(out, NFT_TABLE) >= 0;
 }
 
+/* dnsmasq only re-reads the conf-dir on startup, a SIGHUP (the init script's
+ * "reload") keeps serving the old rules. Restart it so a freshly written rules
+ * file actually takes effect. */
 function reload_dnsmasq() {
-	let p = fs.popen([ '/etc/init.d/dnsmasq', 'reload' ], 'r');
+	let p = fs.popen([ '/etc/init.d/dnsmasq', 'restart' ], 'r');
 
 	if (!p)
 		return;
