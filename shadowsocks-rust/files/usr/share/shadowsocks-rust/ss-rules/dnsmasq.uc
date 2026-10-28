@@ -2,18 +2,18 @@
 'use strict';
 
 /*
- * dnsmasq rule handling for shadowsocks-rust.
+ * Remote list handling and dnsmasq rules for shadowsocks-rust.
  *
  *   render   regenerate the rules file in the dnsmasq conf-dir from the
- *            local UCI lists and the cached remote lists (no network access)
- *   refresh  download the remote lists, update the cache, regenerate the
- *            rules file and reload dnsmasq (meant to run in background)
+ *            local UCI lists and the cached domain lists (no network access)
+ *   refresh  download the remote domain and IP lists, update the caches,
+ *            regenerate the dnsmasq rules and, when the IP lists changed,
+ *            reload the nftables ruleset (meant to run as a procd instance)
  *   remove   drop the rules file from the dnsmasq conf-dir
  *
- * The rules live in the tmpfs conf-dir of dnsmasq, so the overlay
+ * Downloaded IP lists are cached for rules.uc, which merges them into the
+ * nft sets. The dnsmasq rules live in the tmpfs conf-dir, so the overlay
  * filesystem is never written and a stale file disappears on reboot.
- *
- * The nftables ruleset is rendered separately from rules.uc.
  */
 
 let fs = require('fs');
@@ -23,6 +23,9 @@ const NAME = 'shadowsocks-rust';
 const CACHE_DIR = '/var/shadowsocks-rust';
 const PROXY_CACHE = CACHE_DIR + '/proxy-domains.cache';
 const BYPASS_CACHE = CACHE_DIR + '/bypass-domains.cache';
+const PROXY_IP_CACHE = CACHE_DIR + '/proxy-ips.cache';
+const BYPASS_IP_CACHE = CACHE_DIR + '/bypass-ips.cache';
+const RULES_UC = '/usr/share/shadowsocks-rust/ss-rules/rules.uc';
 const RULES_FILE = 'shadowsocks-rust.conf';
 const NFT_TABLE = 'shadowsocks-rust-mangle';
 const DNS_PORT_DEFAULT = 5300;
@@ -163,6 +166,220 @@ function load_domains(option, cache_file) {
 			push(lines, l);
 
 	return normalize(join('\n', lines));
+}
+
+/* ------------------------------------------------------------------ */
+/* IP lists                                                            */
+
+/* Number with an upper bound, rejects leading zeros and other junk. */
+function is_num(s, max) {
+	if (!match(s, /^(0|[1-9][0-9]*)$/))
+		return false;
+
+	let n = int(s);
+
+	return n >= 0 && n <= max;
+}
+
+function valid_v4(s) {
+	let p = split(s, '/');
+
+	if (length(p) > 2)
+		return false;
+
+	let o = split(p[0], '.');
+
+	if (length(o) != 4)
+		return false;
+
+	for (let x in o)
+		if (!is_num(x, 255))
+			return false;
+
+	return length(p) == 2 ? is_num(p[1], 32) : true;
+}
+
+function valid_v6(s) {
+	let p = split(s, '/');
+
+	if (length(p) > 2)
+		return false;
+
+	let a = p[0];
+
+	if (!match(a, /^[0-9A-Fa-f:]+$/) || index(a, ':') < 0)
+		return false;
+
+	if (index(a, ':::') >= 0)
+		return false;
+
+	let dbl = index(a, '::') >= 0;
+
+	if (dbl) {
+		if (index(substr(a, index(a, '::') + 2), '::') >= 0)
+			return false;
+
+		if (substr(a, 0, 1) == ':' && substr(a, 1, 1) != ':')
+			return false;
+
+		if (substr(a, length(a) - 1) == ':' && substr(a, length(a) - 2, 1) != ':')
+			return false;
+	}
+	else if (substr(a, 0, 1) == ':' || substr(a, length(a) - 1) == ':') {
+		return false;
+	}
+
+	let count = 0;
+
+	for (let g in split(a, ':')) {
+		if (!g)
+			continue;
+
+		if (length(g) > 4)
+			return false;
+
+		count++;
+	}
+
+	if (dbl ? count > 7 : count != 8)
+		return false;
+
+	return length(p) == 2 ? is_num(p[1], 128) : true;
+}
+
+function valid_ip(s) {
+	return index(s, ':') >= 0 ? valid_v6(s) : valid_v4(s);
+}
+
+/* Trim, strip comments, validate and de-duplicate an IP list. */
+function normalize_ips(text) {
+	let seen = {};
+	let out = [];
+	let invalid = 0;
+	let sample = null;
+
+	if (!text)
+		return out;
+
+	for (let line in split(text, '\n')) {
+		line = trim(replace(line, /#.*$/, ''));
+
+		if (!line)
+			continue;
+
+		if (!valid_ip(line)) {
+			invalid++;
+			sample ??= line;
+			continue;
+		}
+
+		if (line in seen)
+			continue;
+
+		seen[line] = true;
+		push(out, line);
+	}
+
+	if (invalid)
+		error(sprintf('%d invalid IP entries skipped (e.g. "%s")', invalid, sample));
+
+	return out;
+}
+
+function refresh_ip_one(option, cache_file) {
+	let urls = uci_list('settings', option);
+	let old = fs.readfile(cache_file);
+
+	ensure_cache_dir();
+
+	/* No URL configured: drop the cache so stale entries disappear. */
+	if (!length(urls)) {
+		fs.unlink(cache_file);
+		return old != null;
+	}
+
+	let data = '';
+
+	for (let url in urls) {
+		if (!match(url, URL_RE)) {
+			error(sprintf('invalid IP list URL "%s", skipped', url));
+			continue;
+		}
+
+		let content = fetch(url);
+
+		if (content) {
+			data += content;
+
+			if (!match(content, /\n$/))
+				data += '\n';
+		}
+		else {
+			error(sprintf('failed to download IP list "%s"', url));
+		}
+	}
+
+	let list = normalize_ips(data);
+
+	if (!length(list)) {
+		info('IP list is empty, keeping the cached list');
+		return false;
+	}
+
+	let text = join('\n', list) + '\n';
+
+	if (text == old)
+		return false;
+
+	let tmp = sprintf('%s.%d.tmp', cache_file, clock()[1]);
+
+	if (fs.writefile(tmp, text) && fs.rename(tmp, cache_file)) {
+		info(sprintf('updated cache %s (%d IPs)', cache_file, length(list)));
+		return true;
+	}
+
+	fs.unlink(tmp);
+	error(sprintf('failed to write %s', cache_file));
+
+	return false;
+}
+
+function refresh_ip_cache() {
+	let bypass = refresh_ip_one('bypass_ipset_url', BYPASS_IP_CACHE);
+	let forward = refresh_ip_one('proxy_ipset_url', PROXY_IP_CACHE);
+
+	return bypass || forward;
+}
+
+/* Re-render the nftables ruleset and replace the table in one transaction.
+ * Used when a downloaded IP list changes, the chains themselves are only
+ * re-created by the init script. */
+function reload_nft() {
+	let r = fs.popen([ 'ucode', '-T', RULES_UC ], 'r');
+
+	if (!r)
+		return false;
+
+	let ruleset = r.read('all');
+	r.close();
+
+	if (!ruleset || index(ruleset, 'table inet ' + NFT_TABLE) < 0) {
+		error('failed to render the nftables ruleset');
+		return false;
+	}
+
+	let p = fs.popen([ 'nft', '-f', '-' ], 'w');
+
+	if (!p)
+		return false;
+
+	p.write('delete table inet ' + NFT_TABLE + '\n');
+	p.write(ruleset);
+	p.close();
+
+	info('nftables ruleset updated with the new IP list');
+
+	return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -363,6 +580,8 @@ if (cmd == 'render') {
 else if (cmd == 'refresh') {
 	refresh_cache();
 
+	let ips_changed = refresh_ip_cache();
+
 	/* The download may have taken minutes, re-read the configuration so
 	 * that the render below does not overwrite changes made meanwhile
 	 * with the values captured when this process started. */
@@ -376,6 +595,9 @@ else if (cmd == 'refresh') {
 		if (nft_table_exists()) {
 			if (changed)
 				reload_dnsmasq();
+
+			if (ips_changed)
+				reload_nft();
 		}
 		else {
 			write_rules('');

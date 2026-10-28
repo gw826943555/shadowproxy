@@ -330,9 +330,9 @@ start_shadowsocks_rust() {
   procd_close_instance
 }
 
-# The domain list refresher runs as a second procd instance, so it is
-# stopped with the service and restarted by procd if it dies. The first
-# refresh happens right after start, then every refresh_hours hours.
+# The list refresher (domains and IPs) runs as a second procd instance, so
+# it is stopped with the service and restarted by procd if it dies. The
+# first refresh happens right after start, then every refresh_hours hours.
 start_domain_refresh() {
   local hours
   local interval

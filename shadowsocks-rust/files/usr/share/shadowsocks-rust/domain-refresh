@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Keep the cached domain lists up to date.
+# Keep the cached domain and IP lists up to date.
 #
 # Runs as the "domain-refresh" procd instance of the shadowsocks-rust
 # service, so it is stopped together with the service and restarted by

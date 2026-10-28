@@ -34,6 +34,8 @@ config rules 'settings'
     # their own DNS server still go through the domain rules below.
     option dns_hijack '1'
     list proxy_ipset '8.8.8.8'
+    # URLs of text files with one IP or CIDR per line, # starts a comment.
+    #list proxy_ipset_url 'https://example.com/proxy-ips.txt'
     list proxy_domain 'google.com'
     # URLs of text files with one domain per line, downloaded on every start.
     #list proxy_domain_url 'https://example.com/proxy-domains.txt'
@@ -41,6 +43,7 @@ config rules 'settings'
     # only once when the service starts.
     option refresh_hours '24'
     list bypass_ipset '114.114.114.114'
+    #list bypass_ipset_url 'https://example.com/bypass-ips.txt'
     list bypass_domain 'example.com'
     #list bypass_domain_url 'https://example.com/bypass-domains.txt'
 

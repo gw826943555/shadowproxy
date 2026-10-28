@@ -58,7 +58,7 @@ return view.extend({
         o.rmempty = false;
 
         o = s.taboption('policy', form.Value, 'refresh_hours', _('Domains Refresh Interval'),
-            _('Hours between two downloads of the remote domain lists, 0 downloads them only once when the service starts.'));
+            _('Hours between two downloads of the remote domain and IP lists, 0 downloads them only once when the service starts.'));
         o.datatype = 'range(0,8760)';
         o.default = '24';
         o.placeholder = '24';
@@ -106,8 +106,20 @@ return view.extend({
         o.rmempty = true;
         o.optional = true;
 
+        o = s.taboption('bypass_ipset', form.DynamicList, 'bypass_ipset_url', _('Bypass Ipset URL'),
+            _('URLs of text files with one IP or CIDR per line, # starts a comment. They are downloaded when the service starts and added to the list above.'));
+        o.placeholder = 'https://example.com/bypass-ips.txt';
+        o.rmempty = true;
+        o.optional = true;
+
         o = s.taboption('proxy_ipset', form.DynamicList, 'proxy_ipset', _('Proxy Ipset'),
             _('IP/CIDR ranges forced through the proxy tunnel.'));
+        o.rmempty = true;
+        o.optional = true;
+
+        o = s.taboption('proxy_ipset', form.DynamicList, 'proxy_ipset_url', _('Proxy Ipset URL'),
+            _('URLs of text files with one IP or CIDR per line, # starts a comment. They are downloaded when the service starts and added to the list above.'));
+        o.placeholder = 'https://example.com/proxy-ips.txt';
         o.rmempty = true;
         o.optional = true;
 

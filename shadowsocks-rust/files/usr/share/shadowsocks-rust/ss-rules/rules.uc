@@ -17,6 +17,18 @@ function get_list(sec, name) {
 	return type(v) == "array" ? v : split(v, /[ \t\n]+/);
 }
 
+/* Downloaded IP lists, refreshed by ss-rules/dnsmasq.uc. */
+function get_ip_list(sec, name, cache) {
+	let res = get_list(sec, name);
+	let data = fs.readfile(cache);
+
+	if (data)
+		for (let a in split(data, "\n"))
+			push(res, a);
+
+	return res;
+}
+
 /* Device of the LAN bridge, used to match the DNS hijack rules. */
 function lan_device() {
 	let dev = cur.get("network", "lan", "device");
@@ -70,8 +82,8 @@ let lists = {
 	src_bypass: get_list("settings", "src_bypass"),
 	src_forward: get_list("settings", "src_forward"),
 	src_checkdst: get_list("settings", "src_checkdst"),
-	dst_bypass: get_list("settings", "bypass_ipset"),
-	dst_forward: get_list("settings", "proxy_ipset"),
+	dst_bypass: get_ip_list("settings", "bypass_ipset", "/var/shadowsocks-rust/bypass-ips.cache"),
+	dst_forward: get_ip_list("settings", "proxy_ipset", "/var/shadowsocks-rust/proxy-ips.cache"),
 };
 
 for (let a in private_v4) push(lists.dst_bypass, a);
