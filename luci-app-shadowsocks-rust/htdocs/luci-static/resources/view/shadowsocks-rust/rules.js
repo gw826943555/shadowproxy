@@ -29,6 +29,11 @@ return view.extend({
             _('Apply the route table, nftables and dnsmasq rules. When disabled, TProxy rules are not applied.'));
         o.rmempty = false;
 
+        o = s.taboption('policy', form.Flag, 'dns_hijack', _('Hijack LAN DNS'),
+            _('Redirect DNS queries from LAN clients to this router, so clients that use their own DNS server still follow the domain rules.'));
+        o.default = o.enabled;
+        o.rmempty = false;
+
         o = s.taboption('policy', form.ListValue, 'src_default', _('Default for Source IPs'),
             _('Used for clients not listed in the source tabs.'));
         o.value('accept', _('Direct'));

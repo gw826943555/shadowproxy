@@ -30,6 +30,9 @@ config rules 'settings'
     option dst_default 'accept'
     # none: direct, checkdst: match the lists below, forward: always proxy
     option local_default 'none'
+    # Redirect DNS queries from LAN clients to this router, so clients using
+    # their own DNS server still go through the domain rules below.
+    option dns_hijack '1'
     list proxy_ipset '8.8.8.8'
     list proxy_domain 'google.com'
     # URLs of text files with one domain per line, downloaded on every start.

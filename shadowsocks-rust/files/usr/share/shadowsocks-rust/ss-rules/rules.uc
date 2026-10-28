@@ -17,6 +17,19 @@ function get_list(sec, name) {
 	return type(v) == "array" ? v : split(v, /[ \t\n]+/);
 }
 
+/* Device of the LAN bridge, used to match the DNS hijack rules. */
+function lan_device() {
+	let dev = cur.get("network", "lan", "device");
+
+	if (dev == null)
+		dev = cur.get("network", "lan", "ifname");
+
+	if (type(dev) == "array")
+		dev = dev[0];
+
+	return (dev && dev != "") ? dev : "br-lan";
+}
+
 let v4_re = /^[0-9.]+(\/[0-9]+)?$/;
 let v6_re = /^[0-9a-fA-F:.]+(\/[0-9]+)?$/;
 
@@ -76,6 +89,8 @@ let policy = {
 	src: get_opt("settings", "src_default", "accept"),
 	dst: get_opt("settings", "dst_default", "accept"),
 	local: get_opt("settings", "local_default", "none"),
+	dns_hijack: get_opt("settings", "dns_hijack", "1") == "1",
+	lan_dev: lan_device(),
 };
 
 let redir_port = get_opt("main", "redir_port", "60080");

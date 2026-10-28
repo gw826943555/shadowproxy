@@ -13,10 +13,24 @@ function dst_verdict(v, target) {
 	return "accept";
 }
 %}
+{% if (policy.dns_hijack): %}
+# Redirect DNS from LAN clients to the local dnsmasq. The matching accept
+# rules in ss_rules_pre keep the tproxy rules away from these packets.
+chain ss_dns_hijack {
+	type nat hook prerouting priority dstnat; policy accept;
+	iifname "{{ policy.lan_dev }}" udp dport 53 redirect to :53;
+	iifname "{{ policy.lan_dev }}" tcp dport 53 redirect to :53;
+}
+{% endif %}
+
 chain ss_rules_pre {
 	type filter hook prerouting priority mangle; policy accept;
 	ip daddr @ss_rules_dst_bypass accept;
 	ip6 daddr @ss_rules6_dst_bypass accept;
+{% if (policy.dns_hijack): %}
+	iifname "{{ policy.lan_dev }}" udp dport 53 accept;
+	iifname "{{ policy.lan_dev }}" tcp dport 53 accept;
+{% endif %}
 	meta mark 100 goto ss_rules_forward;
 	meta l4proto { tcp, udp } goto ss_rules_src;
 }
