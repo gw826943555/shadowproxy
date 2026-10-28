@@ -215,7 +215,10 @@ generate_config_json() {
     json_add_string "remote_dns_address" "${MAIN_DNS_REMOTE_ADDR}"
     json_add_int "remote_dns_port" 53
     json_add_int "client_cache_size" "${client_cache_size}"
-    json_add_string "mode" "udp_only"
+    # Need the TCP fallback: obfs-local (simple-obfs) is a TCP only plugin,
+    # UDP relayed to the server as plain Shadowsocks datagrams often gets
+    # dropped, which leaves every proxied DNS lookup unanswered.
+    json_add_string "mode" "tcp_and_udp"
   json_close_object
 
   json_close_array
