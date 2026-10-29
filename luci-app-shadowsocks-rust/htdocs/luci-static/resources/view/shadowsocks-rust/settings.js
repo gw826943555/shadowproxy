@@ -78,16 +78,16 @@ return view.extend({
         o.rmempty = false;
 
         o = s.option(form.Value, 'client_cache_size', _('DNS Client Cache Size'),
-            _('should equals the size of max concurrent udp connections'));
+            _('Idle upstream DNS connections kept for each resolver. Higher values avoid reconnecting for repeated queries, the DNS answers themselves are cached by dnsmasq.'));
         o.datatype = 'range(8,4096)';
         o.rmempty = false;
 
         o = s.option(form.Flag, 'no_delay', _('TCP No Delay'),
-            _('reuse tcp connections or not'));
+            _('Disable the Nagle algorithm so small packets are sent immediately. Lower latency at the cost of slightly more packets.'));
         o.rmempty = false;
 
         o = s.option(form.Value, 'keep_alive', _('TCP Keep Alive'),
-            _('how many seconds to keep the tcp connection'));
+            _('Seconds between TCP keepalive probes, used to detect and drop dead connections.'));
         o.datatype = 'range(5,180)';
         o.rmempty = false;
 
@@ -100,7 +100,7 @@ return view.extend({
         o.rmempty = false;
 
         o = s.option(form.Value, 'nofile', _('Nofile'),
-            _('max allowed sockets limit'));
+            _('File descriptor limit for the sslocal process. Each proxied connection uses one descriptor for the client side and one for the server side, the supervisor caps the limit at 20480.'));
         o.datatype = 'range(512,20480)';
         o.rmempty = false;
 
