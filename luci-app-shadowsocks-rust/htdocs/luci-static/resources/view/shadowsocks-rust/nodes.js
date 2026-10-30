@@ -304,7 +304,7 @@ return view.extend({
             .format(imported, skipped);
 
         if (Object.keys(unknown).length)
-            summary += ' ' + _('Unknown method or plugin, imported as is: %s')
+            summary += ' ' + _('Unsupported method or plugin, imported unchanged: %s')
                 .format(Object.keys(unknown).join(', '));
 
         if (!imported) {
@@ -322,7 +322,7 @@ return view.extend({
     },
 
     showImportResult: function(summary, errors, reload) {
-        ui.showModal(_('Node import'), [
+        ui.showModal(_('Import result'), [
             E('p', {}, summary),
             errors.length ? E('ul', { 'style': 'max-height:40vh;overflow:auto' },
                 errors.map(function(e) { return E('li', {}, e); })) : '',
@@ -352,7 +352,7 @@ return view.extend({
 
         ui.showModal(_('Import nodes'), [
             E('p', { 'class': 'cbi-section-descr' },
-                _('Paste one ss:// URI per line, SIP002 and the legacy base64 form are accepted. Imported nodes are enabled immediately.')),
+                _('Paste one ss:// URI per line. SIP002 and the legacy form are supported, imported nodes are enabled immediately.')),
             E('div', { 'class': 'cbi-value' }, [
                 E('div', { 'class': 'cbi-value-field' }, input)
             ]),
@@ -377,21 +377,21 @@ return view.extend({
         var m, s, o;
 
         m = new form.Map('shadowsocks-rust', _('Shadowsocks-Rust'),
-            _('Shadowsocks-Rust Configuration for tproxy redir and dns'));
+            _('Transparent proxy and DNS settings'));
 
         s = m.section(form.GridSection, 'node', _('Nodes'));
         s.anonymous = true;
         s.addremove = true;
 
-        o = s.option(form.Flag, 'enabled', _('Enable'));
+        o = s.option(form.Flag, 'enabled', _('Enabled'));
         o.editable = true;
 
         o = s.option(form.Value, 'name', _('Name'),
-            _('Optional label, filled in from the #tag of an imported URI.'));
+            _('Optional label, taken from the #tag on import.'));
         o.rmempty = true;
 
         o = s.option(form.Value, 'server', _('Server'),
-            _('address of the remote shadowsocks node, IPv4, IPv6 or hostname'));
+            _('Remote server address: IPv4, IPv6 or hostname.'));
         o.datatype = 'host';
         o.rmempty = false;
 
@@ -408,14 +408,14 @@ return view.extend({
         o.modalonly = true;
 
         o = s.option(form.ListValue, 'plugin', _('Plugin'),
-            _('Only obfs-local from simple-obfs is supported. The obfs-local binary has to be installed on this device, nodes whose plugin is missing are skipped on service start. Leave empty to disable.'));
+            _('Only obfs-local (simple-obfs) is supported. The binary must be installed, otherwise sslocal fails to start.'));
         o.value('', _('none'));
         o.value('obfs-local', 'obfs-local');
         o.rmempty = true;
         o.modalonly = true;
 
         o = s.option(form.Value, 'plugin_opts', _('Plugin Options'),
-            _('simple-obfs options, for example obfs=http;obfs-host=www.bing.com. The obfs value is http or tls.'));
+            _('simple-obfs options, e.g. obfs=http;obfs-host=www.bing.com (obfs is http or tls).'));
         o.placeholder = 'obfs=http;obfs-host=www.bing.com';
         o.depends('plugin', 'obfs-local');
         o.rmempty = true;
