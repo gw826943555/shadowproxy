@@ -1,0 +1,337 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-shadowsocks-rust\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-30 00:00+0000\n"
+"PO-Revision-Date: 2026-10-30 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Shadowsocks-Rust"
+msgstr ""
+
+msgid "Basic Settings"
+msgstr ""
+
+msgid "Nodes"
+msgstr ""
+
+msgid "Rules"
+msgstr ""
+
+msgid "Log"
+msgstr ""
+
+msgid "Transparent proxy and DNS settings"
+msgstr ""
+
+msgid "Service Settings"
+msgstr ""
+
+msgid "Service Status"
+msgstr ""
+
+msgid "Running"
+msgstr ""
+
+msgid "Stopped"
+msgstr ""
+
+msgid "Enabled"
+msgstr ""
+
+msgid "Allow the service to start. When off, sslocal and the rules are not started."
+msgstr ""
+
+msgid "SOCKS Port"
+msgstr ""
+
+msgid "SOCKS5 proxy port, 0 to disable."
+msgstr ""
+
+msgid "HTTP Port"
+msgstr ""
+
+msgid "HTTP proxy port, 0 to disable."
+msgstr ""
+
+msgid "TProxy Port"
+msgstr ""
+
+msgid "Listening port used by the nftables rules."
+msgstr ""
+
+msgid "DNS Port"
+msgstr ""
+
+msgid "Local DNS relay port, dnsmasq forwards proxied domains here."
+msgstr ""
+
+msgid "DNS Remote Server"
+msgstr ""
+
+msgid "Upstream DNS for proxied domains, queried through the tunnel."
+msgstr ""
+
+msgid "Advanced Settings"
+msgstr ""
+
+msgid "Worker Count"
+msgstr ""
+
+msgid "Worker threads, set it to the CPU core count."
+msgstr ""
+
+msgid "DNS Client Cache Size"
+msgstr ""
+
+msgid "Idle upstream DNS connections kept per resolver. Answers are cached by dnsmasq."
+msgstr ""
+
+msgid "TCP No Delay"
+msgstr ""
+
+msgid "Disable Nagle for lower latency at the cost of more packets."
+msgstr ""
+
+msgid "TCP Keep Alive"
+msgstr ""
+
+msgid "Keepalive probe interval in seconds, used to drop dead connections."
+msgstr ""
+
+msgid "TCP Fast Open"
+msgstr ""
+
+msgid "Requires kernel and server support."
+msgstr ""
+
+msgid "TCP MPTCP"
+msgstr ""
+
+msgid "Requires kernel, server and multiple paths."
+msgstr ""
+
+msgid "Open File Limit"
+msgstr ""
+
+msgid "Each proxied connection uses two descriptors."
+msgstr ""
+
+msgid "Log Level"
+msgstr ""
+
+msgid "Log verbosity written to syslog."
+msgstr ""
+
+msgid "Info"
+msgstr ""
+
+msgid "Debug"
+msgstr ""
+
+msgid "Trace"
+msgstr ""
+
+msgid "Policy, source and destination rules"
+msgstr ""
+
+msgid "Policy"
+msgstr ""
+
+msgid "Source Bypass"
+msgstr ""
+
+msgid "Source Forward"
+msgstr ""
+
+msgid "Source Check Destination"
+msgstr ""
+
+msgid "Proxy Domain"
+msgstr ""
+
+msgid "Bypass Domain"
+msgstr ""
+
+msgid "Bypass IP Set"
+msgstr ""
+
+msgid "Proxy IP Set"
+msgstr ""
+
+msgid "Apply TProxy Rules"
+msgstr ""
+
+msgid "Install the route, nftables and dnsmasq rules. Off starts sslocal only."
+msgstr ""
+
+msgid "Hijack LAN DNS"
+msgstr ""
+
+msgid "Redirect DNS queries from LAN clients here, so they follow the domain rules."
+msgstr ""
+
+msgid "Default for Source IPs"
+msgstr ""
+
+msgid "For clients not listed in the source tabs."
+msgstr ""
+
+msgid "Direct"
+msgstr ""
+
+msgid "Check Destination"
+msgstr ""
+
+msgid "Proxy All"
+msgstr ""
+
+msgid "Default for Destinations"
+msgstr ""
+
+msgid "For destinations not matched by the domain and IP lists."
+msgstr ""
+
+msgid "Proxy"
+msgstr ""
+
+msgid "Router Traffic"
+msgstr ""
+
+msgid "For connections made by the router itself."
+msgstr ""
+
+msgid "Lists Refresh Interval"
+msgstr ""
+
+msgid "Hours between two downloads of the remote lists, 0 only once at start."
+msgstr ""
+
+msgid "Client IP/CIDR always direct."
+msgstr ""
+
+msgid "Client IP/CIDR always proxied."
+msgstr ""
+
+msgid "Client IP/CIDR matched against the destination lists."
+msgstr ""
+
+msgid "Domains and subdomains resolved through the tunnel."
+msgstr ""
+
+msgid "Proxy Domain URL"
+msgstr ""
+
+msgid "Text files with one domain per line, added to the list above."
+msgstr ""
+
+msgid "Domains and subdomains resolved directly."
+msgstr ""
+
+msgid "Bypass Domain URL"
+msgstr ""
+
+msgid "IP/CIDR ranges always direct."
+msgstr ""
+
+msgid "Bypass IP Set URL"
+msgstr ""
+
+msgid "Text files with one IP or CIDR per line (# comments allowed), added to the list above."
+msgstr ""
+
+msgid "IP/CIDR ranges always proxied."
+msgstr ""
+
+msgid "Proxy IP Set URL"
+msgstr ""
+
+msgid "missing method or password"
+msgstr ""
+
+msgid "invalid base64 payload"
+msgstr ""
+
+msgid "missing host"
+msgstr ""
+
+msgid "missing method"
+msgstr ""
+
+msgid "invalid host or port"
+msgstr ""
+
+msgid "Line %d: not an ss:// URI"
+msgstr ""
+
+msgid "Line %d: %s"
+msgstr ""
+
+msgid "Imported %d node(s), skipped %d duplicate(s)."
+msgstr ""
+
+msgid "Unsupported method or plugin, imported unchanged: %s"
+msgstr ""
+
+msgid "Failed to save the imported nodes: %s"
+msgstr ""
+
+msgid "Import result"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Import nodes"
+msgstr ""
+
+msgid "Paste one ss:// URI per line. SIP002 and the legacy form are supported, imported nodes are enabled immediately."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Import"
+msgstr ""
+
+msgid "Name"
+msgstr ""
+
+msgid "Optional label, taken from the #tag on import."
+msgstr ""
+
+msgid "Server"
+msgstr ""
+
+msgid "Remote server address: IPv4, IPv6 or hostname."
+msgstr ""
+
+msgid "Port"
+msgstr ""
+
+msgid "Method"
+msgstr ""
+
+msgid "Password"
+msgstr ""
+
+msgid "Plugin"
+msgstr ""
+
+msgid "Only obfs-local (simple-obfs) is supported. The binary must be installed, otherwise sslocal fails to start."
+msgstr ""
+
+msgid "none"
+msgstr ""
+
+msgid "Plugin Options"
+msgstr ""
+
+msgid "simple-obfs options, e.g. obfs=http;obfs-host=www.bing.com (obfs is http or tls)."
+msgstr ""

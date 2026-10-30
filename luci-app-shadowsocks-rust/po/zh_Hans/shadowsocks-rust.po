@@ -1,0 +1,337 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: luci-app-shadowsocks-rust\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-30 00:00+0000\n"
+"PO-Revision-Date: 2026-10-30 00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_Hans\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Shadowsocks-Rust"
+msgstr "Shadowsocks-Rust"
+
+msgid "Basic Settings"
+msgstr "基本设置"
+
+msgid "Nodes"
+msgstr "节点"
+
+msgid "Rules"
+msgstr "规则"
+
+msgid "Log"
+msgstr "日志"
+
+msgid "Transparent proxy and DNS settings"
+msgstr "透明代理与 DNS 设置"
+
+msgid "Service Settings"
+msgstr "服务设置"
+
+msgid "Service Status"
+msgstr "服务状态"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Enabled"
+msgstr "已启用"
+
+msgid "Allow the service to start. When off, sslocal and the rules are not started."
+msgstr "允许启动服务。关闭时不会启动 sslocal 和规则。"
+
+msgid "SOCKS Port"
+msgstr "SOCKS 端口"
+
+msgid "SOCKS5 proxy port, 0 to disable."
+msgstr "SOCKS5 代理端口，0 表示关闭。"
+
+msgid "HTTP Port"
+msgstr "HTTP 端口"
+
+msgid "HTTP proxy port, 0 to disable."
+msgstr "HTTP 代理端口，0 表示关闭。"
+
+msgid "TProxy Port"
+msgstr "TProxy 端口"
+
+msgid "Listening port used by the nftables rules."
+msgstr "nftables 规则使用的监听端口。"
+
+msgid "DNS Port"
+msgstr "DNS 端口"
+
+msgid "Local DNS relay port, dnsmasq forwards proxied domains here."
+msgstr "本地 DNS 中继端口，dnsmasq 把代理域名转发到这里。"
+
+msgid "DNS Remote Server"
+msgstr "远程 DNS 服务器"
+
+msgid "Upstream DNS for proxied domains, queried through the tunnel."
+msgstr "代理域名的上游 DNS，查询经隧道发出。"
+
+msgid "Advanced Settings"
+msgstr "高级设置"
+
+msgid "Worker Count"
+msgstr "工作线程数"
+
+msgid "Worker threads, set it to the CPU core count."
+msgstr "工作线程数，建议设为 CPU 核心数。"
+
+msgid "DNS Client Cache Size"
+msgstr "DNS 客户端缓存数"
+
+msgid "Idle upstream DNS connections kept per resolver. Answers are cached by dnsmasq."
+msgstr "每个上游保留的空闲 DNS 连接数；应答由 dnsmasq 缓存。"
+
+msgid "TCP No Delay"
+msgstr "TCP 低延迟"
+
+msgid "Disable Nagle for lower latency at the cost of more packets."
+msgstr "禁用 Nagle 算法以降低延迟，代价是包数量略增。"
+
+msgid "TCP Keep Alive"
+msgstr "TCP 保活"
+
+msgid "Keepalive probe interval in seconds, used to drop dead connections."
+msgstr "保活探测间隔（秒），用于清理失效连接。"
+
+msgid "TCP Fast Open"
+msgstr "TCP Fast Open"
+
+msgid "Requires kernel and server support."
+msgstr "需要内核与服务端支持。"
+
+msgid "TCP MPTCP"
+msgstr "TCP MPTCP"
+
+msgid "Requires kernel, server and multiple paths."
+msgstr "需要内核、服务端和多路径支持。"
+
+msgid "Open File Limit"
+msgstr "文件描述符上限"
+
+msgid "Each proxied connection uses two descriptors."
+msgstr "每条代理连接占用两个描述符。"
+
+msgid "Log Level"
+msgstr "日志级别"
+
+msgid "Log verbosity written to syslog."
+msgstr "写入 syslog 的日志详细程度。"
+
+msgid "Info"
+msgstr "信息"
+
+msgid "Debug"
+msgstr "调试"
+
+msgid "Trace"
+msgstr "跟踪"
+
+msgid "Policy, source and destination rules"
+msgstr "策略、来源与目标规则"
+
+msgid "Policy"
+msgstr "策略"
+
+msgid "Source Bypass"
+msgstr "来源直连"
+
+msgid "Source Forward"
+msgstr "来源代理"
+
+msgid "Source Check Destination"
+msgstr "来源按目标判断"
+
+msgid "Proxy Domain"
+msgstr "代理域名"
+
+msgid "Bypass Domain"
+msgstr "直连域名"
+
+msgid "Bypass IP Set"
+msgstr "直连 IP 集"
+
+msgid "Proxy IP Set"
+msgstr "代理 IP 集"
+
+msgid "Apply TProxy Rules"
+msgstr "启用 TProxy 规则"
+
+msgid "Install the route, nftables and dnsmasq rules. Off starts sslocal only."
+msgstr "安装路由、nftables 和 dnsmasq 规则；关闭时仅启动 sslocal。"
+
+msgid "Hijack LAN DNS"
+msgstr "劫持局域网 DNS"
+
+msgid "Redirect DNS queries from LAN clients here, so they follow the domain rules."
+msgstr "将局域网客户端的 DNS 查询重定向到本机，使其遵循域名规则。"
+
+msgid "Default for Source IPs"
+msgstr "来源 IP 默认策略"
+
+msgid "For clients not listed in the source tabs."
+msgstr "用于来源标签页中未列出的客户端。"
+
+msgid "Direct"
+msgstr "直连"
+
+msgid "Check Destination"
+msgstr "按目标判断"
+
+msgid "Proxy All"
+msgstr "全部代理"
+
+msgid "Default for Destinations"
+msgstr "目标默认策略"
+
+msgid "For destinations not matched by the domain and IP lists."
+msgstr "用于未被域名和 IP 列表匹配的目标。"
+
+msgid "Proxy"
+msgstr "代理"
+
+msgid "Router Traffic"
+msgstr "路由器自身流量"
+
+msgid "For connections made by the router itself."
+msgstr "用于路由器自身发起的连接。"
+
+msgid "Lists Refresh Interval"
+msgstr "列表刷新间隔"
+
+msgid "Hours between two downloads of the remote lists, 0 only once at start."
+msgstr "远程列表的下载间隔（小时），0 表示仅在启动时下载一次。"
+
+msgid "Client IP/CIDR always direct."
+msgstr "始终直连的客户端 IP/CIDR。"
+
+msgid "Client IP/CIDR always proxied."
+msgstr "始终代理的客户端 IP/CIDR。"
+
+msgid "Client IP/CIDR matched against the destination lists."
+msgstr "按目标列表判断的客户端 IP/CIDR。"
+
+msgid "Domains and subdomains resolved through the tunnel."
+msgstr "通过隧道解析的域名及其子域名。"
+
+msgid "Proxy Domain URL"
+msgstr "代理域名列表 URL"
+
+msgid "Text files with one domain per line, added to the list above."
+msgstr "每行一个域名的文本文件，会追加到上方列表。"
+
+msgid "Domains and subdomains resolved directly."
+msgstr "直接解析的域名及其子域名。"
+
+msgid "Bypass Domain URL"
+msgstr "直连域名列表 URL"
+
+msgid "IP/CIDR ranges always direct."
+msgstr "始终直连的 IP/CIDR 范围。"
+
+msgid "Bypass IP Set URL"
+msgstr "直连 IP 列表 URL"
+
+msgid "Text files with one IP or CIDR per line (# comments allowed), added to the list above."
+msgstr "每行一个 IP 或 CIDR 的文本文件（支持 # 注释），会追加到上方列表。"
+
+msgid "IP/CIDR ranges always proxied."
+msgstr "始终代理的 IP/CIDR 范围。"
+
+msgid "Proxy IP Set URL"
+msgstr "代理 IP 列表 URL"
+
+msgid "missing method or password"
+msgstr "缺少加密方法或密码"
+
+msgid "invalid base64 payload"
+msgstr "base64 内容无效"
+
+msgid "missing host"
+msgstr "缺少主机地址"
+
+msgid "missing method"
+msgstr "缺少加密方法"
+
+msgid "invalid host or port"
+msgstr "主机或端口无效"
+
+msgid "Line %d: not an ss:// URI"
+msgstr "第 %d 行：不是 ss:// 链接"
+
+msgid "Line %d: %s"
+msgstr "第 %d 行：%s"
+
+msgid "Imported %d node(s), skipped %d duplicate(s)."
+msgstr "已导入 %d 个节点，跳过 %d 个重复节点。"
+
+msgid "Unsupported method or plugin, imported unchanged: %s"
+msgstr "不支持的加密方法或插件，已原样导入：%s"
+
+msgid "Failed to save the imported nodes: %s"
+msgstr "保存导入的节点失败：%s"
+
+msgid "Import result"
+msgstr "导入结果"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "Import nodes"
+msgstr "导入节点"
+
+msgid "Paste one ss:// URI per line. SIP002 and the legacy form are supported, imported nodes are enabled immediately."
+msgstr "每行粘贴一个 ss:// 链接。支持 SIP002 和旧版 base64 格式，导入的节点会立即启用。"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Import"
+msgstr "导入"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Optional label, taken from the #tag on import."
+msgstr "可选名称，导入时取自链接的 #tag。"
+
+msgid "Server"
+msgstr "服务器"
+
+msgid "Remote server address: IPv4, IPv6 or hostname."
+msgstr "远程服务器地址：IPv4、IPv6 或域名。"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Method"
+msgstr "加密方法"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "Plugin"
+msgstr "插件"
+
+msgid "Only obfs-local (simple-obfs) is supported. The binary must be installed, otherwise sslocal fails to start."
+msgstr "仅支持 obfs-local（simple-obfs）。必须安装该程序，否则 sslocal 无法启动。"
+
+msgid "none"
+msgstr "无"
+
+msgid "Plugin Options"
+msgstr "插件参数"
+
+msgid "simple-obfs options, e.g. obfs=http;obfs-host=www.bing.com (obfs is http or tls)."
+msgstr "simple-obfs 参数，例如 obfs=http;obfs-host=www.bing.com（obfs 取值为 http 或 tls）。"
