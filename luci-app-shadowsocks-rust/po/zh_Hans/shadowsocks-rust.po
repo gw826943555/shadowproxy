@@ -335,3 +335,10 @@ msgstr "插件参数"
 
 msgid "simple-obfs options, e.g. obfs=http;obfs-host=www.bing.com (obfs is http or tls)."
 msgstr "simple-obfs 参数，例如 obfs=http;obfs-host=www.bing.com（obfs 取值为 http 或 tls）。"
+
+msgid "Destination Rules"
+msgstr "目标规则"
+
+msgid "Source Rules"
+msgstr "来源规则"
+

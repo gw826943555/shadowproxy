@@ -17,13 +17,8 @@ return view.extend({
             _('Policy, source and destination rules'));
         s.anonymous = true;
         s.tab('policy', _('Policy'));
-        s.tab('src_bypass', _('Source Bypass'));
-        s.tab('src_forward', _('Source Forward'));
-        s.tab('src_checkdst', _('Source Check Destination'));
-        s.tab('proxy_domain', _('Proxy Domain'));
-        s.tab('bypass_domain', _('Bypass Domain'));
-        s.tab('bypass_ipset', _('Bypass IP Set'));
-        s.tab('proxy_ipset', _('Proxy IP Set'));
+        s.tab('sources', _('Source Rules'));
+        s.tab('destinations', _('Destination Rules'));
 
         o = s.taboption('policy', form.Flag, 'enabled', _('Apply TProxy Rules'),
             _('Install the route, nftables and dnsmasq rules. Off starts sslocal only.'));
@@ -64,62 +59,62 @@ return view.extend({
         o.placeholder = '24';
         o.rmempty = false;
 
-        o = s.taboption('src_bypass', form.DynamicList, 'src_bypass', _('Source Bypass'),
+        o = s.taboption('sources', form.DynamicList, 'src_bypass', _('Source Bypass'),
             _('Client IP/CIDR always direct.'));
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('src_forward', form.DynamicList, 'src_forward', _('Source Forward'),
+        o = s.taboption('sources', form.DynamicList, 'src_forward', _('Source Forward'),
             _('Client IP/CIDR always proxied.'));
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('src_checkdst', form.DynamicList, 'src_checkdst', _('Source Check Destination'),
+        o = s.taboption('sources', form.DynamicList, 'src_checkdst', _('Source Check Destination'),
             _('Client IP/CIDR matched against the destination lists.'));
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('proxy_domain', form.DynamicList, 'proxy_domain', _('Proxy Domain'),
+        o = s.taboption('destinations', form.DynamicList, 'proxy_domain', _('Proxy Domain'),
             _('Domains and subdomains resolved through the tunnel.'));
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('proxy_domain', form.DynamicList, 'proxy_domain_url', _('Proxy Domain URL'),
+        o = s.taboption('destinations', form.DynamicList, 'proxy_domain_url', _('Proxy Domain URL'),
             _('Text files with one domain per line, added to the list above.'));
         o.placeholder = 'https://example.com/proxy-domains.txt';
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('bypass_domain', form.DynamicList, 'bypass_domain', _('Bypass Domain'),
+        o = s.taboption('destinations', form.DynamicList, 'proxy_ipset', _('Proxy IP Set'),
+            _('IP/CIDR ranges always proxied.'));
+        o.rmempty = true;
+        o.optional = true;
+
+        o = s.taboption('destinations', form.DynamicList, 'proxy_ipset_url', _('Proxy IP Set URL'),
+            _('Text files with one IP or CIDR per line (# comments allowed), added to the list above.'));
+        o.placeholder = 'https://example.com/proxy-ips.txt';
+        o.rmempty = true;
+        o.optional = true;
+
+        o = s.taboption('destinations', form.DynamicList, 'bypass_domain', _('Bypass Domain'),
             _('Domains and subdomains resolved directly.'));
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('bypass_domain', form.DynamicList, 'bypass_domain_url', _('Bypass Domain URL'),
+        o = s.taboption('destinations', form.DynamicList, 'bypass_domain_url', _('Bypass Domain URL'),
             _('Text files with one domain per line, added to the list above.'));
         o.placeholder = 'https://example.com/bypass-domains.txt';
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('bypass_ipset', form.DynamicList, 'bypass_ipset', _('Bypass IP Set'),
+        o = s.taboption('destinations', form.DynamicList, 'bypass_ipset', _('Bypass IP Set'),
             _('IP/CIDR ranges always direct.'));
         o.rmempty = true;
         o.optional = true;
 
-        o = s.taboption('bypass_ipset', form.DynamicList, 'bypass_ipset_url', _('Bypass IP Set URL'),
+        o = s.taboption('destinations', form.DynamicList, 'bypass_ipset_url', _('Bypass IP Set URL'),
             _('Text files with one IP or CIDR per line (# comments allowed), added to the list above.'));
         o.placeholder = 'https://example.com/bypass-ips.txt';
-        o.rmempty = true;
-        o.optional = true;
-
-        o = s.taboption('proxy_ipset', form.DynamicList, 'proxy_ipset', _('Proxy IP Set'),
-            _('IP/CIDR ranges always proxied.'));
-        o.rmempty = true;
-        o.optional = true;
-
-        o = s.taboption('proxy_ipset', form.DynamicList, 'proxy_ipset_url', _('Proxy IP Set URL'),
-            _('Text files with one IP or CIDR per line (# comments allowed), added to the list above.'));
-        o.placeholder = 'https://example.com/proxy-ips.txt';
         o.rmempty = true;
         o.optional = true;
 
