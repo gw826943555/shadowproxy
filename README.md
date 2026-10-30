@@ -84,6 +84,8 @@ opkg install nftables kmod-nft-tproxy ucode ucode-mod-fs ucode-mod-uci
    - **HTTP 代理端口**：可选，设为 `0` 禁用
 
 > 💡 本地 DNS（非代理域名）由 dnsmasq 按照 `/etc/config/dhcp` 里的配置解析，Shadowsocks-Rust 不再接管 dnsmasq 的上游设置。
+>
+> 💡 代理域名默认用系统 DNS 解析；也可以在 `Rules` → `Destination Rules` 的 `Proxy Domain DNS` 里改成本地中继（`127.0.0.1:5300`，查询走隧道）或指定的 `ip:port`。
 
 ### 节点配置（Nodes 标签页）
 
@@ -374,10 +376,12 @@ opkg install nftables kmod-nft-tproxy ucode ucode-mod-fs ucode-mod-uci
 ### DNS 解析原理
 
 ```
-[客户端] → [dnsmasq] ── 国内域名 → 默认上游 DNS（直连）
-                  └─ 代理域名   → [Shadowsocks-Rust DNS(5300)] → 远程 DNS（走隧道）
-                                                     └─ 解析到的 IP 写入 nft set，流量走代理
+[客户端] → [dnsmasq] ── 其他域名 → 默认上游 DNS（可被 Other Domains DNS 替换）
+                  └─ 代理域名   → Proxy Domain DNS（默认 系统 DNS，可改 本地中继/自定义）
+                                        └─ 解析到的 IP 写入 nft set，流量走代理
 ```
+
+「代理域名」的解析服务器可以在 `Rules` → `Policy` 里改，见下文。
 
 ### 自定义分流规则
 
@@ -388,7 +392,18 @@ opkg install nftables kmod-nft-tproxy ucode ucode-mod-fs ucode-mod-uci
   - `Default for Destinations`：未列入目的地址列表的流量，直连 / 代理
   - `Router Traffic`：路由器自身发出的连接，直连 / 检查目的地址 / 全部代理
 - **Source Bypass / Source Forward / Source Check Destination**：按客户端源 IP/CIDR 区分，分别表示始终直连、始终代理、按目的地址判断
-- **Proxy Domain**：代理域名，域名及其子域名的查询走隧道，解析到的 IP 加入代理 nft set
+- **Proxy Domain**：代理域名，域名及其子域名的流量走隧道，解析到的 IP 加入代理 nft set
+- **Proxy Domain DNS**：代理域名用哪个服务器解析
+  - 留空（默认）：系统默认 DNS，不生成 `server=` 行
+  - `本地中继（127.0.0.1:5300）`：交给 sslocal 的本地 DNS 中继（即上面的 `DNS 端口`），查询经隧道发出
+  - 直接填 `ip:port`（如 `1.1.1.1:53`，IPv6 写成 `[地址]:端口`）：直接查询该服务器，查询不经过隧道
+- **Bypass Domain DNS**：直连域名用哪个服务器解析
+  - 留空（默认）：系统默认 DNS，不生成 `server=` 行
+  - `本地中继（127.0.0.1:5300）`：交给 sslocal 的本地 DNS 中继
+  - 直接填 `ip:port`：直接查询该服务器
+- **Other Domains DNS**：列表之外域名的解析服务器
+  - 留空（默认）：系统默认 DNS
+  - 设置 `ip:port` 后：写入全局 `server=` 和 `no-resolv`，**替换** WAN 下发的 DNS（连同 proxy/bypass 留空时的"系统 DNS"也一起变成它）
 - **Bypass Domain**：绕过域名，直接解析，解析到的 IP 直连。同时出现在两个列表里时按绕过处理
 - **Bypass Ipset / Proxy Ipset**：绕过 / 强制代理的 IP/CIDR
 

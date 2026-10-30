@@ -28,7 +28,6 @@ const BYPASS_IP_CACHE = CACHE_DIR + '/bypass-ips.cache';
 const RULES_UC = '/usr/share/shadowsocks-rust/ss-rules/rules.uc';
 const RULES_FILE = 'shadowsocks-rust.conf';
 const NFT_TABLE = 'shadowsocks-rust-mangle';
-const DNS_PORT_DEFAULT = 5300;
 const DOMAIN_RE = /^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*$/;
 const URL_RE = /^https?:\/\/[^[:space:]'"]+$/;
 
@@ -251,6 +250,62 @@ function valid_ip(s) {
 	return index(s, ':') >= 0 ? valid_v6(s) : valid_v4(s);
 }
 
+/* Port of a resolver address, 1-65535. */
+function valid_port(s) {
+	if (!match(s, /^[0-9]{1,5}$/))
+		return false;
+
+	let n = int(s);
+
+	return n >= 1 && n <= 65535;
+}
+
+/* Convert "1.1.1.1:53" or "[::1]:53" into the form dnsmasq expects,
+ * "1.1.1.1#53" / "::1#53". The port is mandatory and IPv6 addresses must be
+ * bracketed. Returns null when invalid. */
+function parse_nameserver(v) {
+	v = trim(v ?? '');
+
+	let host = v;
+	let port = null;
+
+	if (substr(v, 0, 1) == '[') {
+		let end = index(v, ']');
+
+		if (end < 0)
+			return null;
+
+		host = substr(v, 1, end - 1);
+
+		let rest = substr(v, end + 1);
+
+		if (!match(rest, /^:[0-9]{1,5}$/))
+			return null;
+
+		port = substr(rest, 1);
+	}
+	else {
+		let c = index(v, ':');
+
+		/* One colon separates the port, two or more belong to an
+		 * IPv6 address, which must then be bracketed. */
+		if (c < 0 || index(substr(v, c + 1), ':') >= 0)
+			return null;
+
+		host = substr(v, 0, c);
+		port = substr(v, c + 1);
+	}
+
+	if (!valid_port(port))
+		return null;
+
+	/* valid_ip() also accepts CIDR, a resolver address must not. */
+	if (index(host, '/') >= 0 || !valid_ip(host))
+		return null;
+
+	return host + '#' + port;
+}
+
 /* Trim, strip comments, validate and de-duplicate an IP list. */
 function normalize_ips(text) {
 	let seen = {};
@@ -385,6 +440,26 @@ function reload_nft() {
 /* ------------------------------------------------------------------ */
 /* dnsmasq config                                                      */
 
+/* Resolver dnsmasq is told to use for a domain list, in its
+ * "server=/domain/<addr>" syntax. Returns null when the domains should be
+ * resolved by the system resolvers instead, i.e. when the option is unset
+ * or invalid. */
+function domain_nameserver(option) {
+	let v = trim(ctx.get(NAME, 'settings', option) ?? '');
+
+	if (!v)
+		return null;
+
+	let ns = parse_nameserver(v);
+
+	if (ns)
+		return ns;
+
+	error(sprintf('invalid DNS server for %s "%s", using the system resolvers', option, v));
+
+	return null;
+}
+
 /* Directory dnsmasq includes as --conf-dir, using the same logic as
  * /etc/init.d/dnsmasq: the confdir option of the first dnsmasq instance or
  * /tmp/dnsmasq.<section>.d when it is not set. Keeping the rules in tmpfs
@@ -456,27 +531,45 @@ function write_rules(content) {
 function render() {
 	ensure_cache_dir();
 
-	let dns_port = ctx.get(NAME, 'main', 'dns_port') || DNS_PORT_DEFAULT;
+	let proxy_ns = domain_nameserver('proxy_domain_dns');
+	let bypass_ns = domain_nameserver('bypass_domain_dns');
+	let other_ns = domain_nameserver('other_domain_dns');
 	let proxy = load_domains('proxy_domain', PROXY_CACHE);
 	let bypass = load_domains('bypass_domain', BYPASS_CACHE);
 	let final_proxy = length(bypass) ? filter_proxy(proxy, bypass) : proxy;
 	let out = [];
 
-	/* bypass domains only contribute an nftset entry, they are not
-	 * resolved through sslocal */
-	for (let d in bypass)
+	/* bypass domains are resolved by the configured resolver, by default
+	 * the system resolvers, and land in the bypass set */
+	for (let d in bypass) {
+		if (bypass_ns)
+			push(out, sprintf('server=/%s/%s', d, bypass_ns));
+
 		push(out, sprintf('nftset=/%s/4#inet#%s#ss_rules_dst_bypass,6#inet#%s#ss_rules6_dst_bypass',
 			d, NFT_TABLE, NFT_TABLE));
+	}
 
-	/* proxy domains are resolved by sslocal and land in the forward set */
+	/* proxy domains are resolved by the configured resolver, by default
+	 * the system resolvers too, and land in the forward set */
 	for (let d in final_proxy) {
-		push(out, sprintf('server=/%s/127.0.0.1#%s', d, dns_port));
+		if (proxy_ns)
+			push(out, sprintf('server=/%s/%s', d, proxy_ns));
+
 		push(out, sprintf('nftset=/%s/4#inet#%s#ss_rules_dst_forward,6#inet#%s#ss_rules6_dst_forward',
 			d, NFT_TABLE, NFT_TABLE));
 	}
 
-	info(sprintf('dnsmasq rules rendered: %d proxy, %d bypass',
-		length(final_proxy), length(bypass)));
+	/* Domains not matched by any list: replace the system resolvers with a
+	 * dedicated default server, so that the WAN-provided DNS is ignored. */
+	if (other_ns) {
+		push(out, 'no-resolv');
+		push(out, sprintf('server=%s', other_ns));
+	}
+
+	info(sprintf('dnsmasq rules rendered: %d proxy (%s), %d bypass (%s), default %s',
+		length(final_proxy), proxy_ns ?? 'system',
+		length(bypass), bypass_ns ?? 'system',
+		other_ns ?? 'system'));
 
 	return write_rules(join('\n', out));
 }

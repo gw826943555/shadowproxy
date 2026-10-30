@@ -222,8 +222,8 @@ msgstr "始终代理的客户端 IP/CIDR。"
 msgid "Client IP/CIDR matched against the destination lists."
 msgstr "按目标列表判断的客户端 IP/CIDR。"
 
-msgid "Domains and subdomains resolved through the tunnel."
-msgstr "通过隧道解析的域名及其子域名。"
+msgid "Domains and subdomains whose traffic goes through the tunnel."
+msgstr "流量经隧道转发的域名及其子域名。"
 
 msgid "Proxy Domain URL"
 msgstr "代理域名列表 URL"
@@ -342,3 +342,26 @@ msgstr "目标规则"
 msgid "Source Rules"
 msgstr "来源规则"
 
+msgid "Proxy Domain DNS"
+msgstr "代理域名 DNS"
+
+msgid "Resolver used for the proxy domains. Leave empty for the system resolvers, or enter an ip:port."
+msgstr "代理域名的解析服务器。留空使用系统解析，或填写 ip:port。"
+
+msgid "Local Relay"
+msgstr "本地中继"
+
+msgid "System DNS"
+msgstr "系统 DNS"
+
+msgid "Bypass Domain DNS"
+msgstr "直连域名 DNS"
+
+msgid "Resolver used for the bypass domains. Leave empty for the system resolvers, or enter an ip:port."
+msgstr "直连域名的解析服务器。留空使用系统解析，或填写 ip:port。"
+
+msgid "Other Domains DNS"
+msgstr "其它域名 DNS"
+
+msgid "Resolver for the domains not matched by the lists. When set it replaces the system DNS, leave empty to use the system resolvers."
+msgstr "列表外域名的解析服务器。设置后会替换系统 DNS，留空使用系统解析。"

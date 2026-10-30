@@ -36,6 +36,15 @@ config rules 'settings'
     list proxy_ipset '8.8.8.8'
     # URLs of text files with one IP or CIDR per line, # starts a comment.
     #list proxy_ipset_url 'https://example.com/proxy-ips.txt'
+    # Resolver for the proxy domains, an ip:port. Leave unset (or empty) for
+    # the system resolvers, use 127.0.0.1:<dns port> for the local relay.
+    #option proxy_domain_dns '127.0.0.1:5300'
+    # Resolver for the bypass domains, an ip:port. Leave unset (or empty)
+    # for the system resolvers.
+    #option bypass_domain_dns '223.5.5.5:53'
+    # Resolver for the domains not in the lists, an ip:port. When set it
+    # replaces the system resolvers (noresolv) for those domains.
+    #option other_domain_dns '223.5.5.5:53'
     list proxy_domain 'google.com'
     # URLs of text files with one domain per line, downloaded on every start.
     #list proxy_domain_url 'https://example.com/proxy-domains.txt'

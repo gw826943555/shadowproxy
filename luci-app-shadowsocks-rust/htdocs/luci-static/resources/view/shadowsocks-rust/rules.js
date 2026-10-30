@@ -1,10 +1,13 @@
 'use strict';
 'require view';
 'require form';
+'require uci';
 
 return view.extend({
     load: function() {
-        return Promise.all([]);
+        return Promise.all([
+            uci.load('shadowsocks-rust')
+        ]);
     },
 
     render: function() {
@@ -28,6 +31,30 @@ return view.extend({
             _('Redirect DNS queries from LAN clients here, so they follow the domain rules.'));
         o.default = o.enabled;
         o.rmempty = false;
+
+        var dns_port = uci.get('shadowsocks-rust', 'main', 'dns_port') || '5300';
+        var local_relay = '127.0.0.1:' + dns_port;
+
+        o = s.taboption('policy', form.Value, 'proxy_domain_dns', _('Proxy Domain DNS'),
+            _('Resolver used for the proxy domains. Leave empty for the system resolvers, or enter an ip:port.'));
+        o.value(local_relay, _('Local Relay') + ' (' + local_relay + ')');
+        o.datatype = 'ipaddrport(1)';
+        o.placeholder = _('System DNS');
+        o.rmempty = true;
+
+        o = s.taboption('policy', form.Value, 'bypass_domain_dns', _('Bypass Domain DNS'),
+            _('Resolver used for the bypass domains. Leave empty for the system resolvers, or enter an ip:port.'));
+        o.value(local_relay, _('Local Relay') + ' (' + local_relay + ')');
+        o.datatype = 'ipaddrport(1)';
+        o.placeholder = _('System DNS');
+        o.rmempty = true;
+
+        o = s.taboption('policy', form.Value, 'other_domain_dns', _('Other Domains DNS'),
+            _('Resolver for the domains not matched by the lists. When set it replaces the system DNS, leave empty to use the system resolvers.'));
+        o.value(local_relay, _('Local Relay') + ' (' + local_relay + ')');
+        o.datatype = 'ipaddrport(1)';
+        o.placeholder = _('System DNS');
+        o.rmempty = true;
 
         o = s.taboption('policy', form.ListValue, 'src_default', _('Default for Source IPs'),
             _('For clients not listed in the source tabs.'));
@@ -75,7 +102,7 @@ return view.extend({
         o.optional = true;
 
         o = s.taboption('destinations', form.DynamicList, 'proxy_domain', _('Proxy Domain'),
-            _('Domains and subdomains resolved through the tunnel.'));
+            _('Domains and subdomains whose traffic goes through the tunnel.'));
         o.rmempty = true;
         o.optional = true;
 

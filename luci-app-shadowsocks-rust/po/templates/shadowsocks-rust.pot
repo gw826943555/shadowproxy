@@ -222,7 +222,7 @@ msgstr ""
 msgid "Client IP/CIDR matched against the destination lists."
 msgstr ""
 
-msgid "Domains and subdomains resolved through the tunnel."
+msgid "Domains and subdomains whose traffic goes through the tunnel."
 msgstr ""
 
 msgid "Proxy Domain URL"
@@ -342,3 +342,26 @@ msgstr ""
 msgid "Source Rules"
 msgstr ""
 
+msgid "Proxy Domain DNS"
+msgstr ""
+
+msgid "Resolver used for the proxy domains. Leave empty for the system resolvers, or enter an ip:port."
+msgstr ""
+
+msgid "Local Relay"
+msgstr ""
+
+msgid "System DNS"
+msgstr ""
+
+msgid "Bypass Domain DNS"
+msgstr ""
+
+msgid "Resolver used for the bypass domains. Leave empty for the system resolvers, or enter an ip:port."
+msgstr ""
+
+msgid "Other Domains DNS"
+msgstr ""
+
+msgid "Resolver for the domains not matched by the lists. When set it replaces the system DNS, leave empty to use the system resolvers."
+msgstr ""
